@@ -38,6 +38,14 @@ vi.mock('@capacitor/barcode-scanner', () => ({
   },
 }));
 
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: vi.fn(),
+    getLaunchUrl: vi.fn(),
+    removeAllListeners: vi.fn(),
+  },
+}));
+
 // Mock IntersectionObserver (required for some Ionic components)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}

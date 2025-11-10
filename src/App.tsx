@@ -19,13 +19,20 @@ import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
 import { useConferenceStore } from './store/conferenceStore';
+import { useDeepLink } from './hooks/useDeepLink';
 import ConferenceListPage from './pages/ConferenceListPage';
 import AddConferencePage from './pages/AddConferencePage';
 
 setupIonicReact();
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const initialize = useConferenceStore(state => state.initialize);
+
+  // Initialize deep linking
+  useDeepLink({
+    navigateOnSuccess: true,
+    checkLaunchUrl: true,
+  });
 
   // Initialize the conference store when app starts
   useEffect(() => {
@@ -33,13 +40,19 @@ const App: React.FC = () => {
   }, [initialize]);
 
   return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/conferences" replace />} />
+      <Route path="/conferences" element={<ConferenceListPage />} />
+      <Route path="/conferences/add" element={<AddConferencePage />} />
+    </Routes>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <IonApp>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/conferences" replace />} />
-          <Route path="/conferences" element={<ConferenceListPage />} />
-          <Route path="/conferences/add" element={<AddConferencePage />} />
-        </Routes>
+        <AppContent />
       </BrowserRouter>
     </IonApp>
   );
