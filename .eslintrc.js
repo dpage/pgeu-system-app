@@ -18,4 +18,26 @@ module.exports = {
     'prefer-const': 'error',
     'no-var': 'error',
   },
+  overrides: [
+    {
+      // Test files configuration
+      files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', 'src/test/**/*.ts', 'src/test/**/*.tsx'],
+      plugins: ['vitest'],
+      extends: ['plugin:vitest/recommended'],
+      env: {
+        'vitest/env': true,
+      },
+      rules: {
+        // Allow any types in tests for mocking purposes
+        '@typescript-eslint/no-explicit-any': 'off',
+        // Allow console in tests
+        'no-console': 'off',
+        // Vitest-specific rules
+        'vitest/expect-expect': 'error',
+        'vitest/no-disabled-tests': 'warn',
+        'vitest/no-focused-tests': 'error',
+        'vitest/valid-expect': 'error',
+      },
+    },
+  ],
 };
