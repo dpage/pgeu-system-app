@@ -1,0 +1,15 @@
+/**
+ * ML Kit Barcode Scanner Styles
+ * The ML Kit scanner displays the camera feed BEHIND the WebView.
+ * Based on official Capawesome documentation.
+ */
+
+body.barcode-scanner-active {
+  visibility: hidden;
+  --background: transparent;
+  --ion-background-color: transparent;
+}
+
+.barcode-scanner-modal {
+  visibility: visible;
+}

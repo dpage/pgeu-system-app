@@ -16,7 +16,7 @@ interface ConferenceState {
   error: string | null;
 
   // Computed
-  activeConference: Conference | null;
+  get activeConference(): Conference | null;
 
   // Actions
   initialize: () => Promise<void>;
@@ -38,7 +38,7 @@ export const useConferenceStore = create<ConferenceState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Computed property
+  // Computed getter
   get activeConference() {
     const state = get();
     if (!state.activeConferenceId) {

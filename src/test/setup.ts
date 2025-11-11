@@ -1,4 +1,4 @@
-import { expect, afterEach, vi } from 'vitest';
+import { afterEach, vi, beforeAll, afterAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -30,11 +30,12 @@ vi.mock('@capacitor/preferences', () => ({
 }));
 
 vi.mock('@capacitor/barcode-scanner', () => ({
-  BarcodeScanner: {
-    scan: vi.fn(),
-    isSupported: vi.fn(() => Promise.resolve({ supported: true })),
-    checkPermissions: vi.fn(() => Promise.resolve({ camera: 'granted' })),
-    requestPermissions: vi.fn(() => Promise.resolve({ camera: 'granted' })),
+  CapacitorBarcodeScanner: {
+    scanBarcode: vi.fn(),
+  },
+  CapacitorBarcodeScannerTypeHint: {
+    QR_CODE: 0,
+    ALL: 17,
   },
 }));
 

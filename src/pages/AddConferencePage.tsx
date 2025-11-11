@@ -24,14 +24,17 @@ import {
   IonCardContent,
   IonList,
 } from '@ionic/react';
-import { arrowBack, checkmark } from 'ionicons/icons';
+import { arrowBack, checkmark, helpCircleOutline } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
+import HelpModal from '../components/HelpModal';
+import { helpContent } from '../content/helpContent';
 
 const AddConferencePage: React.FC = () => {
   const navigate = useNavigate();
   const { addConferenceFromUrl, error, clearError } = useConferenceStore();
   const [url, setUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleBack = () => {
     navigate(-1);
@@ -66,6 +69,11 @@ const AddConferencePage: React.FC = () => {
             </IonButton>
           </IonButtons>
           <IonTitle>Add Conference</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => setShowHelp(true)}>
+              <IonIcon slot="icon-only" icon={helpCircleOutline} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -154,6 +162,12 @@ const AddConferencePage: React.FC = () => {
           </IonCardContent>
         </IonCard>
       </IonContent>
+
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        helpSection={helpContent.addConference}
+      />
     </IonPage>
   );
 };
