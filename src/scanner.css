@@ -115,6 +115,31 @@ body.barcode-scanner-active .scanner-overlay {
   z-index: 10001;
 }
 
+/* Cancel button */
+.scanner-cancel-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 10002;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: 2px solid var(--ion-color-primary, #3880ff);
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.scanner-cancel-button:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.85);
+}
+
 /* Scanning animation */
 @keyframes scan-line {
   0% {

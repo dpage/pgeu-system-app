@@ -288,6 +288,32 @@ const ScannerPage: React.FC = () => {
     setStatus('Ready to scan');
   };
 
+  const cancelScan = async () => {
+    console.log('[Scanner] Cancel button clicked');
+    try {
+      // Stop scanning
+      await BarcodeScanner.stopScan();
+      console.log('[Scanner] Scanner stopped');
+
+      // Remove active class
+      document.body.classList.remove('barcode-scanner-active');
+
+      // Reset state
+      setLoading(false);
+      setStatus('Scan cancelled');
+      setError(null);
+
+      // Navigate back to previous page
+      navigate(-1);
+    } catch (error) {
+      console.error('[Scanner] Error canceling scan:', error);
+      // Even if there's an error, still try to navigate back
+      document.body.classList.remove('barcode-scanner-active');
+      setLoading(false);
+      navigate(-1);
+    }
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -484,6 +510,9 @@ const ScannerPage: React.FC = () => {
 
       {/* Scanner Overlay with Focus Box */}
       <div className="scanner-overlay barcode-scanner-modal">
+        <button className="scanner-cancel-button" onClick={cancelScan}>
+          Cancel
+        </button>
         <div className="scanner-focus-box">
           <div className="scanner-focus-corner top-left"></div>
           <div className="scanner-focus-corner top-right"></div>
