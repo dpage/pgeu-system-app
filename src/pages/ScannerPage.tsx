@@ -481,6 +481,20 @@ const ScannerPage: React.FC = () => {
         onClose={() => setShowHelp(false)}
         helpSection={helpContent.scanning}
       />
+
+      {/* Scanner Overlay with Focus Box */}
+      <div className="scanner-overlay barcode-scanner-modal">
+        <div className="scanner-focus-box">
+          <div className="scanner-focus-corner top-left"></div>
+          <div className="scanner-focus-corner top-right"></div>
+          <div className="scanner-focus-corner bottom-left"></div>
+          <div className="scanner-focus-corner bottom-right"></div>
+          <div className="scanner-scan-line"></div>
+          <div className="scanner-instruction">
+            Position QR code within frame
+          </div>
+        </div>
+      </div>
     </IonPage>
   );
 };
