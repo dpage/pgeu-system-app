@@ -30,7 +30,7 @@ import {
   IonCardTitle,
   IonModal,
 } from '@ionic/react';
-import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, checkmarkCircle, closeCircle } from 'ionicons/icons';
+import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, checkmarkCircle, closeCircle, stopCircle } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
 import { CheckinRegistration } from '../types/api';
@@ -84,7 +84,6 @@ const ConferenceListPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<CheckinRegistration[]>([]);
   const [searching, setSearching] = useState<boolean>(false);
-  const [searchDebugInfo, setSearchDebugInfo] = useState<string>('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAddConference = () => {
@@ -285,9 +284,6 @@ const ConferenceListPage: React.FC = () => {
         apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
       }
 
-      const debugInfo = `Query: "${trimmedQuery}"\nMode: ${activeConference.mode}\nURL: ${apiUrl}`;
-      setSearchDebugInfo(debugInfo);
-
       console.log('[ConferenceList] Performing search:', {
         query: trimmedQuery,
         apiUrl,
@@ -304,9 +300,6 @@ const ConferenceListPage: React.FC = () => {
         results: searchResponse.regs?.map(r => ({ id: r.id, name: r.name })) || [],
       });
 
-      const resultDebug = `${debugInfo}\nResults: ${searchResponse.regs?.length || 0}`;
-      setSearchDebugInfo(resultDebug);
-
       // Set results (with longer debounce, race conditions are less likely)
       setSearchResults(searchResponse.regs || []);
     } catch (apiError: any) {
@@ -317,9 +310,6 @@ const ConferenceListPage: React.FC = () => {
         errorMessage: apiError?.message,
         statusCode: apiError?.statusCode,
       });
-
-      const errorDebug = `Query: "${trimmedQuery}"\nError: ${apiError?.message || 'Unknown error'}\nType: ${apiError?.type || 'unknown'}\nStatus: ${apiError?.statusCode || 'N/A'}`;
-      setSearchDebugInfo(errorDebug);
 
       // Clear results on error
       setSearchResults([]);
@@ -343,7 +333,6 @@ const ConferenceListPage: React.FC = () => {
     } else {
       setSearchResults([]);
       setSearching(false);
-      setSearchDebugInfo('');
     }
   };
 
@@ -532,19 +521,6 @@ const ConferenceListPage: React.FC = () => {
                             <IonText color="medium">
                               <p style={{ margin: 0, textAlign: 'center' }}>No results found</p>
                             </IonText>
-                            {searchDebugInfo && (
-                              <pre style={{
-                                marginTop: '16px',
-                                fontSize: '11px',
-                                backgroundColor: '#f5f5f5',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-all'
-                              }}>
-                                {searchDebugInfo}
-                              </pre>
-                            )}
                           </div>
                         )}
                       </IonCardContent>
@@ -783,6 +759,13 @@ const ConferenceListPage: React.FC = () => {
                       <IonItem>
                         <IonLabel>
                           <strong>Policy Confirmed:</strong> {scanResult.policyconfirmed}
+                          {scanResult.policyconfirmed.toLowerCase().includes('no') && (
+                            <IonIcon
+                              icon={stopCircle}
+                              color="danger"
+                              style={{ marginLeft: '8px', fontSize: '20px', verticalAlign: 'middle' }}
+                            />
+                          )}
                         </IonLabel>
                       </IonItem>
                     )}
