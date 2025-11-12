@@ -156,6 +156,7 @@ const ConferenceListPage: React.FC = () => {
 
         if (!result.barcodes || result.barcodes.length === 0) {
           setScanError('No barcode found');
+          setScanResult(null);
           setIsScanning(false);
           return;
         }
@@ -181,6 +182,7 @@ const ConferenceListPage: React.FC = () => {
 
           if (!attendee) {
             setScanError('Invalid response from server');
+            setScanResult(null);
             setIsScanning(false);
             return;
           }
@@ -188,10 +190,12 @@ const ConferenceListPage: React.FC = () => {
           console.log('[Scanner] Attendee found:', attendee.name);
           setScanResult(attendee);
           setAlreadyCheckedIn(!!attendee.already);
+          setScanError(null);
           setIsScanning(false);
         } catch (apiError: any) {
           console.error('[Scanner] API error:', apiError);
           setScanError(apiError.message || 'Failed to lookup attendee');
+          setScanResult(null);
           setIsScanning(false);
         }
       });
@@ -203,6 +207,7 @@ const ConferenceListPage: React.FC = () => {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('[Scanner] Scan error:', msg);
       setScanError(`Scan failed: ${msg}`);
+      setScanResult(null);
       setIsScanning(false);
     }
   };
@@ -417,9 +422,11 @@ const ConferenceListPage: React.FC = () => {
         <IonToolbar color="primary">
           <IonTitle>Conference Scanner</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={handleStats}>
-              <IonIcon slot="icon-only" icon={statsChartOutline} />
-            </IonButton>
+            {activeConference?.mode === 'checkin' && (
+              <IonButton onClick={handleStats}>
+                <IonIcon slot="icon-only" icon={statsChartOutline} />
+              </IonButton>
+            )}
             <IonButton onClick={() => setShowHelp(true)}>
               <IonIcon slot="icon-only" icon={helpCircleOutline} />
             </IonButton>
