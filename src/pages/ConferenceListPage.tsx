@@ -26,14 +26,17 @@ import {
   IonSearchbar,
   IonCard,
   IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonModal,
 } from '@ionic/react';
-import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close } from 'ionicons/icons';
+import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, checkmarkCircle, closeCircle } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
 import { CheckinRegistration } from '../types/api';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
 const ConferenceListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +44,14 @@ const ConferenceListPage: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showConferenceModal, setShowConferenceModal] = useState(false);
   const [hideMainContent, setHideMainContent] = useState(false);
+
+  // Scanning state
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<CheckinRegistration | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
+
   const {
     conferences,
     activeConferenceId,
@@ -90,14 +101,159 @@ const ConferenceListPage: React.FC = () => {
       await setActiveConference(conferences[0].id);
     }
 
-    // Verify we have an active conference before navigating
+    // Verify we have an active conference before scanning
     const currentState = useConferenceStore.getState();
     if (!currentState.activeConferenceId) {
       console.error('Failed to set active conference - no activeConferenceId');
       return;
     }
 
-    navigate('/scanner');
+    // Start scanning directly
+    startScan();
+  };
+
+  const startScan = async () => {
+    const activeConf = conferences.find(c => c.id === activeConferenceId);
+    if (!activeConf) {
+      setScanError('No active conference selected');
+      return;
+    }
+
+    setIsScanning(true);
+    setScanError(null);
+    setScanResult(null);
+
+    try {
+      // Check support
+      const supported = await BarcodeScanner.isSupported();
+      if (!supported.supported) {
+        setScanError('Barcode scanning is not supported on this device');
+        setIsScanning(false);
+        return;
+      }
+
+      // Check permissions
+      const permStatus = await BarcodeScanner.checkPermissions();
+      if (permStatus.camera !== 'granted') {
+        const permResult = await BarcodeScanner.requestPermissions();
+        if (permResult.camera !== 'granted') {
+          setScanError('Camera permission denied. Please enable camera access in settings.');
+          setIsScanning(false);
+          return;
+        }
+      }
+
+      // Hide WebView and start scanning
+      document.body.classList.add('barcode-scanner-active');
+
+      // Add barcode listener
+      const listener = await BarcodeScanner.addListener('barcodesScanned', async (result) => {
+        console.log('[Scanner] Barcode scanned:', result);
+
+        // Stop scanning and remove listener
+        await BarcodeScanner.stopScan();
+        await listener.remove();
+        document.body.classList.remove('barcode-scanner-active');
+
+        if (!result.barcodes || result.barcodes.length === 0) {
+          setScanError('No barcode found');
+          setIsScanning(false);
+          return;
+        }
+
+        const qrCode = result.barcodes[0].rawValue;
+        console.log('[Scanner] Scanned QR code:', qrCode);
+
+        // Build API URL based on scan mode
+        let apiUrl: string;
+        if (activeConf.mode === 'sponsor') {
+          apiUrl = `${activeConf.baseUrl}/events/sponsor/scanning/${activeConf.token}/`;
+        } else if (activeConf.mode === 'field' && activeConf.fieldId) {
+          apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/f${activeConf.fieldId}/`;
+        } else {
+          apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/`;
+        }
+
+        const apiClient = createApiClient(apiUrl);
+
+        try {
+          const lookupResponse = await apiClient.lookupAttendee(qrCode);
+          const attendee = 'reg' in lookupResponse ? (lookupResponse.reg as CheckinRegistration) : null;
+
+          if (!attendee) {
+            setScanError('Invalid response from server');
+            setIsScanning(false);
+            return;
+          }
+
+          console.log('[Scanner] Attendee found:', attendee.name);
+          setScanResult(attendee);
+          setAlreadyCheckedIn(!!attendee.already);
+          setIsScanning(false);
+        } catch (apiError: any) {
+          console.error('[Scanner] API error:', apiError);
+          setScanError(apiError.message || 'Failed to lookup attendee');
+          setIsScanning(false);
+        }
+      });
+
+      // Start scanning
+      await BarcodeScanner.startScan();
+    } catch (error) {
+      document.body.classList.remove('barcode-scanner-active');
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[Scanner] Scan error:', msg);
+      setScanError(`Scan failed: ${msg}`);
+      setIsScanning(false);
+    }
+  };
+
+  const checkIn = async () => {
+    if (!scanResult) return;
+
+    const activeConf = conferences.find(c => c.id === activeConferenceId);
+    if (!activeConf) return;
+
+    setCheckingIn(true);
+    setScanError(null);
+
+    try {
+      let apiUrl: string;
+      if (activeConf.mode === 'sponsor') {
+        apiUrl = `${activeConf.baseUrl}/events/sponsor/scanning/${activeConf.token}/`;
+      } else if (activeConf.mode === 'field' && activeConf.fieldId) {
+        apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/f${activeConf.fieldId}/`;
+      } else {
+        apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/`;
+      }
+
+      const apiClient = createApiClient(apiUrl);
+      await apiClient.store({ token: scanResult.token });
+      setAlreadyCheckedIn(true);
+    } catch (apiError: any) {
+      console.error('[Scanner] Check-in error:', apiError);
+      setScanError(apiError.message || 'Failed to check in');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  const resetScan = () => {
+    setScanResult(null);
+    setScanError(null);
+    setAlreadyCheckedIn(false);
+  };
+
+  const cancelScan = async () => {
+    console.log('[Scanner] Cancelling scan');
+    try {
+      await BarcodeScanner.stopScan();
+      document.body.classList.remove('barcode-scanner-active');
+      setIsScanning(false);
+      setScanError(null);
+    } catch (error) {
+      console.error('[Scanner] Error cancelling scan:', error);
+    }
   };
 
   // Search functionality
@@ -196,12 +352,9 @@ const ConferenceListPage: React.FC = () => {
     setSearchQuery('');
     setSearchResults([]);
 
-    // Navigate to scanner page with the attendee data
-    navigate('/scanner', {
-      state: {
-        selectedAttendee: attendee
-      }
-    });
+    // Show attendee in scan result modal
+    setScanResult(attendee);
+    setAlreadyCheckedIn(!!attendee.already);
   };
 
   const highlightMatch = (text: string, query: string): JSX.Element => {
@@ -512,11 +665,215 @@ const ConferenceListPage: React.FC = () => {
         </IonContent>
       </IonModal>
 
+      {/* Scan Result Modal */}
+      <IonModal
+        isOpen={isScanning || scanResult !== null || scanError !== null}
+        onDidDismiss={() => {
+          setIsScanning(false);
+          setScanResult(null);
+          setScanError(null);
+          setAlreadyCheckedIn(false);
+        }}
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>
+              {isScanning ? 'Scanning...' : scanResult ? 'Scan Result' : 'Scan Error'}
+            </IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => {
+                setIsScanning(false);
+                setScanResult(null);
+                setScanError(null);
+                setAlreadyCheckedIn(false);
+              }}>
+                <IonIcon slot="icon-only" icon={close} />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          {isScanning && (
+            <div className="ion-text-center" style={{ marginTop: '50%' }}>
+              <IonSpinner style={{ width: '56px', height: '56px' }} />
+              <p style={{ marginTop: '16px' }}>Point camera at QR code...</p>
+            </div>
+          )}
+
+          {scanError && !isScanning && (
+            <div className="ion-text-center" style={{ marginTop: '20%' }}>
+              <IonIcon
+                icon={closeCircle}
+                style={{ fontSize: '64px', color: 'var(--ion-color-danger)' }}
+              />
+              <h2>Error</h2>
+              <IonText color="danger">
+                <p>{scanError}</p>
+              </IonText>
+              <IonButton
+                expand="block"
+                onClick={() => {
+                  setScanError(null);
+                  startScan();
+                }}
+                style={{ marginTop: '24px' }}
+              >
+                Try Again
+              </IonButton>
+            </div>
+          )}
+
+          {scanResult && !isScanning && (
+            <div style={{ marginTop: '20px' }}>
+              {/* Already Checked In Warning */}
+              {alreadyCheckedIn && scanResult.already && (
+                <IonCard color="warning">
+                  <IonCardHeader>
+                    <IonCardTitle>{scanResult.already.title}</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <IonText>
+                      <p>{scanResult.already.body}</p>
+                    </IonText>
+                  </IonCardContent>
+                </IonCard>
+              )}
+
+              {/* Attendee Details Card */}
+              <IonCard>
+                <IonCardHeader>
+                  <IonCardTitle>{scanResult.name}</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <IonList>
+                    {scanResult.company && (
+                      <IonItem>
+                        <IonLabel>
+                          <strong>Company:</strong> {scanResult.company}
+                        </IonLabel>
+                      </IonItem>
+                    )}
+                    <IonItem>
+                      <IonLabel>
+                        <strong>Type:</strong> {scanResult.type}
+                      </IonLabel>
+                    </IonItem>
+                    {scanResult.tshirt && (
+                      <IonItem>
+                        <IonLabel>
+                          <strong>T-Shirt:</strong> {scanResult.tshirt}
+                        </IonLabel>
+                      </IonItem>
+                    )}
+                    {scanResult.partition && (
+                      <IonItem>
+                        <IonLabel>
+                          <strong>Partition:</strong> {scanResult.partition}
+                        </IonLabel>
+                      </IonItem>
+                    )}
+                    {scanResult.photoconsent && (
+                      <IonItem>
+                        <IonLabel>
+                          <strong>Photo Consent:</strong> {scanResult.photoconsent}
+                        </IonLabel>
+                      </IonItem>
+                    )}
+                    {scanResult.policyconfirmed && (
+                      <IonItem>
+                        <IonLabel>
+                          <strong>Policy Confirmed:</strong> {scanResult.policyconfirmed}
+                        </IonLabel>
+                      </IonItem>
+                    )}
+                  </IonList>
+
+                  {/* Highlight Badges */}
+                  {scanResult.highlight && scanResult.highlight.length > 0 && (
+                    <div style={{ marginTop: '15px' }}>
+                      {scanResult.highlight.map((hl, idx) => (
+                        <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
+                          {hl}
+                        </IonBadge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Additional Information */}
+                  {scanResult.additional && scanResult.additional.length > 0 && (
+                    <div style={{ marginTop: '15px' }}>
+                      <IonText color="medium">
+                        <p><strong>Additional Info:</strong></p>
+                      </IonText>
+                      {scanResult.additional.map((info, idx) => (
+                        <IonText key={idx}>
+                          <p style={{ marginTop: '5px', fontSize: '14px' }}>{info}</p>
+                        </IonText>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Check-in Message */}
+                  {scanResult.checkinmessage && (
+                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+                      <IonText>
+                        <p style={{ margin: 0 }}>{scanResult.checkinmessage}</p>
+                      </IonText>
+                    </div>
+                  )}
+                </IonCardContent>
+              </IonCard>
+
+              {/* Check-In Button */}
+              {!alreadyCheckedIn && (
+                <IonButton
+                  expand="block"
+                  size="large"
+                  color="success"
+                  onClick={checkIn}
+                  disabled={checkingIn}
+                  style={{ marginTop: '20px' }}
+                >
+                  {checkingIn ? 'Checking In...' : 'Check In'}
+                </IonButton>
+              )}
+
+              <IonButton
+                expand="block"
+                fill="outline"
+                onClick={() => {
+                  resetScan();
+                }}
+                style={{ marginTop: '16px' }}
+              >
+                Close
+              </IonButton>
+            </div>
+          )}
+        </IonContent>
+      </IonModal>
+
       <HelpModal
         isOpen={showHelp}
         onClose={() => setShowHelp(false)}
         helpSection={helpContent.conferenceList}
       />
+
+      {/* Scanner Overlay - shown when barcode-scanner-active class is added to body */}
+      <div className="scanner-overlay">
+        <div className="scanner-overlay-background"></div>
+        <button className="scanner-cancel-button" onClick={cancelScan}>
+          Cancel
+        </button>
+        <div className="scanner-focus-box">
+          <div className="scanner-focus-corner top-left"></div>
+          <div className="scanner-focus-corner top-right"></div>
+          <div className="scanner-focus-corner bottom-left"></div>
+          <div className="scanner-focus-corner bottom-right"></div>
+          <div className="scanner-scan-line"></div>
+          <div className="scanner-instruction">Point camera at QR code</div>
+        </div>
+      </div>
     </IonPage>
   );
 };

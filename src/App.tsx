@@ -25,8 +25,6 @@ import { useConferenceStore } from './store/conferenceStore';
 import { useDeepLink } from './hooks/useDeepLink';
 import ConferenceListPage from './pages/ConferenceListPage';
 import AddConferencePage from './pages/AddConferencePage';
-import ScannerPage from './pages/ScannerPage';
-import ScannerTestPage from './pages/ScannerTestPage';
 import StatsPage from './pages/StatsPage';
 
 setupIonicReact();
@@ -50,8 +48,6 @@ const AppContent: React.FC = () => {
       <Route path="/" element={<Navigate to="/conferences" replace />} />
       <Route path="/conferences" element={<ConferenceListPage />} />
       <Route path="/conferences/add" element={<AddConferencePage />} />
-      <Route path="/scanner" element={<ScannerPage />} />
-      <Route path="/scanner-test" element={<ScannerTestPage />} />
       <Route path="/stats" element={<StatsPage />} />
     </Routes>
   );
