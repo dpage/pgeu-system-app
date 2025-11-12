@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   IonButton,
@@ -75,6 +75,13 @@ const ScannerPage: React.FC = () => {
     }
   }, [activeConference]);
 
+  // Automatically start scanning when the page loads
+  useEffect(() => {
+    if (activeConference && !loading && !scanResult) {
+      scan();
+    }
+  }, [activeConference]);  // Only run when activeConference changes
+
   const scan = async () => {
     console.log('[Scanner] scan() called');
     setStatus('Starting scan...');
@@ -112,113 +119,124 @@ const ScannerPage: React.FC = () => {
         }
       }
 
-      // Hide WebView and scan
+      // Hide WebView and start scanning immediately
       setStatus('Scanning...');
       document.body.classList.add('barcode-scanner-active');
-      const scanResponse = await BarcodeScanner.scan();
-      document.body.classList.remove('barcode-scanner-active');
 
-      if (!scanResponse.barcodes || scanResponse.barcodes.length === 0) {
-        setStatus('No barcode found');
-        setLoading(false);
-        return;
-      }
+      // Add barcode listener
+      const listener = await BarcodeScanner.addListener('barcodesScanned', async (result) => {
+        console.log('[Scanner] Barcode scanned:', result);
 
-      const qrCode = scanResponse.barcodes[0].rawValue;
-      console.log('[Scanner] Scanned QR code:', qrCode);
+        // Stop scanning and remove listener
+        await BarcodeScanner.stopScan();
+        await listener.remove();
+        document.body.classList.remove('barcode-scanner-active');
 
-      // Check for test barcode
-      try {
-        const scannedUrl = new URL(qrCode);
-        const testPath = '/t/id/TESTTESTTESTTEST/';
-
-        if (scannedUrl.pathname === testPath) {
-          console.log('[Scanner] Test barcode detected');
-
-          // Validate that the hostname matches the conference baseUrl
-          const conferenceUrl = new URL(activeConference.baseUrl);
-
-          if (scannedUrl.hostname === conferenceUrl.hostname) {
-            console.log('[Scanner] Test barcode validation successful');
-            setStatus('Camera test successful!');
-            setError(null);
-            setLoading(false);
-
-            // Show success message for a few seconds, then reset
-            setTimeout(() => {
-              reset();
-            }, 3000);
-            return;
-          } else {
-            console.log('[Scanner] Test barcode server mismatch');
-            setError(`Test barcode server mismatch. Expected: ${conferenceUrl.hostname}, Got: ${scannedUrl.hostname}`);
-            setStatus('Error');
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (urlError) {
-        // Not a valid URL or not a test barcode, continue with normal processing
-        console.log('[Scanner] QR code is not a valid URL or not a test barcode');
-      }
-
-      setStatus('Looking up attendee...');
-
-      // Lookup attendee via API
-      console.log('[Scanner] Active conference:', JSON.stringify({
-        id: activeConference.id,
-        name: activeConference.name,
-        baseUrl: activeConference.baseUrl,
-        eventSlug: activeConference.eventSlug,
-        mode: activeConference.mode,
-        fieldId: activeConference.fieldId,
-        token: activeConference.token ? '***' : undefined
-      }));
-
-      // Build API URL based on scan mode
-      let apiUrl: string;
-      if (activeConference.mode === 'sponsor') {
-        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
-      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
-      } else {
-        // Default check-in mode
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
-      }
-
-      console.log('[Scanner] API URL:', apiUrl);
-      const apiClient = createApiClient(apiUrl);
-
-      try {
-        console.log('[Scanner] Calling lookupAttendee...');
-        const lookupResponse = await apiClient.lookupAttendee(qrCode);
-        console.log('[Scanner] Lookup response:', lookupResponse);
-        const attendee = 'reg' in lookupResponse ? (lookupResponse.reg as CheckinRegistration) : null;
-
-        if (!attendee) {
-          console.error('[Scanner] No attendee in response');
-          setError('Invalid response from server');
-          setStatus('Error');
+        if (!result.barcodes || result.barcodes.length === 0) {
+          setStatus('No barcode found');
           setLoading(false);
           return;
         }
 
-        console.log('[Scanner] Attendee found:', attendee.name);
-        setScanResult({
-          attendee,
-          alreadyCheckedIn: !!attendee.already,
-        });
-        setStatus('Attendee found');
-        setLoading(false);
-      } catch (apiError: any) {
-        console.error('[Scanner] API error (full):', JSON.stringify(apiError, null, 2));
-        console.error('[Scanner] API error message:', apiError.message);
-        console.error('[Scanner] API error type:', apiError.type);
-        console.error('[Scanner] API error details:', apiError.details);
-        setError(apiError.message || 'Failed to lookup attendee');
-        setStatus('Error');
-        setLoading(false);
-      }
+        const qrCode = result.barcodes[0].rawValue;
+        console.log('[Scanner] Scanned QR code:', qrCode);
+
+        // Check for test barcode
+        try {
+          const scannedUrl = new URL(qrCode);
+          const testPath = '/t/id/TESTTESTTESTTEST/';
+
+          if (scannedUrl.pathname === testPath) {
+            console.log('[Scanner] Test barcode detected');
+
+            // Validate that the hostname matches the conference baseUrl
+            const conferenceUrl = new URL(activeConference.baseUrl);
+
+            if (scannedUrl.hostname === conferenceUrl.hostname) {
+              console.log('[Scanner] Test barcode validation successful');
+              setStatus('Camera test successful!');
+              setError(null);
+              setLoading(false);
+
+              // Show success message for a few seconds, then reset
+              setTimeout(() => {
+                reset();
+              }, 3000);
+              return;
+            } else {
+              console.log('[Scanner] Test barcode server mismatch');
+              setError(`Test barcode server mismatch. Expected: ${conferenceUrl.hostname}, Got: ${scannedUrl.hostname}`);
+              setStatus('Error');
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (urlError) {
+          // Not a valid URL or not a test barcode, continue with normal processing
+          console.log('[Scanner] QR code is not a valid URL or not a test barcode');
+        }
+
+        setStatus('Looking up attendee...');
+
+        // Lookup attendee via API
+        console.log('[Scanner] Active conference:', JSON.stringify({
+          id: activeConference.id,
+          name: activeConference.name,
+          baseUrl: activeConference.baseUrl,
+          eventSlug: activeConference.eventSlug,
+          mode: activeConference.mode,
+          fieldId: activeConference.fieldId,
+          token: activeConference.token ? '***' : undefined
+        }));
+
+        // Build API URL based on scan mode
+        let apiUrl: string;
+        if (activeConference.mode === 'sponsor') {
+          apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
+        } else if (activeConference.mode === 'field' && activeConference.fieldId) {
+          apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
+        } else {
+          // Default check-in mode
+          apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+        }
+
+        console.log('[Scanner] API URL:', apiUrl);
+        const apiClient = createApiClient(apiUrl);
+
+        try {
+          console.log('[Scanner] Calling lookupAttendee...');
+          const lookupResponse = await apiClient.lookupAttendee(qrCode);
+          console.log('[Scanner] Lookup response:', lookupResponse);
+          const attendee = 'reg' in lookupResponse ? (lookupResponse.reg as CheckinRegistration) : null;
+
+          if (!attendee) {
+            console.error('[Scanner] No attendee in response');
+            setError('Invalid response from server');
+            setStatus('Error');
+            setLoading(false);
+            return;
+          }
+
+          console.log('[Scanner] Attendee found:', attendee.name);
+          setScanResult({
+            attendee,
+            alreadyCheckedIn: !!attendee.already,
+          });
+          setStatus('Attendee found');
+          setLoading(false);
+        } catch (apiError: any) {
+          console.error('[Scanner] API error (full):', JSON.stringify(apiError, null, 2));
+          console.error('[Scanner] API error message:', apiError.message);
+          console.error('[Scanner] API error type:', apiError.type);
+          console.error('[Scanner] API error details:', apiError.details);
+          setError(apiError.message || 'Failed to lookup attendee');
+          setStatus('Error');
+          setLoading(false);
+        }
+      });
+
+      // Start scanning
+      await BarcodeScanner.startScan();
     } catch (error) {
       document.body.classList.remove('barcode-scanner-active');
       const msg = error instanceof Error ? error.message : String(error);
