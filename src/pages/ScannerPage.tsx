@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   IonButton,
   IonContent,
@@ -20,6 +20,7 @@ import {
   IonBadge,
   IonSpinner,
   IonIcon,
+  IonSearchbar,
 } from '@ionic/react';
 import { helpCircleOutline, statsChartOutline } from 'ionicons/icons';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -37,12 +38,17 @@ interface ScanResult {
 
 const ScannerPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState<string>('Ready to scan');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<CheckinRegistration[]>([]);
+  const [searching, setSearching] = useState<boolean>(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const conferences = useConferenceStore(state => state.conferences);
   const activeConferenceId = useConferenceStore(state => state.activeConferenceId);
@@ -75,12 +81,23 @@ const ScannerPage: React.FC = () => {
     }
   }, [activeConference]);
 
-  // Automatically start scanning when the page loads
+  // Handle selected attendee from search
   useEffect(() => {
-    if (activeConference && !loading && !scanResult) {
-      scan();
+    const state = location.state as { selectedAttendee?: CheckinRegistration };
+    if (state?.selectedAttendee) {
+      console.log('[Scanner] Attendee selected from search:', state.selectedAttendee.name);
+      setScanResult({
+        attendee: state.selectedAttendee,
+        alreadyCheckedIn: !!state.selectedAttendee.already,
+      });
+      setStatus('Attendee found via search');
+      // Clear the state to prevent re-triggering on re-render
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [activeConference]);  // Only run when activeConference changes
+  }, [location, navigate]);
+
+  // Note: Removed auto-scan to allow users to see search option
+  // Users can now choose between scanning or searching
 
   const scan = async () => {
     console.log('[Scanner] scan() called');
@@ -286,6 +303,105 @@ const ScannerPage: React.FC = () => {
     setScanResult(null);
     setError(null);
     setStatus('Ready to scan');
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Search for attendees by name
+  const performSearch = async (query: string) => {
+    if (!activeConference || !query || query.trim().length === 0) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    setError(null);
+
+    try {
+      // Build API URL
+      let apiUrl: string;
+      if (activeConference.mode === 'sponsor') {
+        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
+      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
+      } else {
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      }
+
+      const apiClient = createApiClient(apiUrl);
+      const searchResponse = await apiClient.searchAttendees(query.trim());
+      setSearchResults(searchResponse.regs || []);
+    } catch (apiError: any) {
+      console.error('[Scanner] Search error:', apiError);
+      setSearchResults([]);
+      // Don't show error for search, just return empty results
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Handle search input with debouncing
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce search API calls
+    if (value.trim().length > 0) {
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearch(value);
+      }, 300);
+    } else {
+      setSearchResults([]);
+      setSearching(false);
+    }
+  };
+
+  // Handle attendee selection from search results
+  const handleAttendeeSelect = (attendee: CheckinRegistration) => {
+    console.log('[Scanner] Attendee selected from search:', attendee.name);
+
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+
+    // Show attendee details as if scanned
+    setScanResult({
+      attendee,
+      alreadyCheckedIn: !!attendee.already,
+    });
+    setStatus('Attendee found via search');
+  };
+
+  // Helper function to highlight matching text
+  const highlightMatch = (text: string, query: string): JSX.Element => {
+    if (!query || query.trim().length === 0) {
+      return <span>{text}</span>;
+    }
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase().trim();
+    const index = lowerText.indexOf(lowerQuery);
+
+    if (index === -1) {
+      return <span>{text}</span>;
+    }
+
+    const before = text.substring(0, index);
+    const match = text.substring(index, index + lowerQuery.length);
+    const after = text.substring(index + lowerQuery.length);
+
+    return (
+      <span>
+        {before}
+        <strong>{match}</strong>
+        {highlightMatch(after, '')}
+      </span>
+    );
   };
 
   const cancelScan = async () => {
@@ -364,6 +480,66 @@ const ScannerPage: React.FC = () => {
             </IonButton>
           )}
         </div>
+
+        {/* Search Bar - only show when not scanning and no result */}
+        {!scanResult && !loading && (
+          <div style={{ marginTop: '30px' }}>
+            <IonSearchbar
+              value={searchQuery}
+              onIonInput={(e) => handleSearchChange(e.detail.value || '')}
+              placeholder="Search by name..."
+              debounce={0}
+              disabled={!activeConference}
+            />
+
+            {/* Search Results Dropdown */}
+            {searchQuery.trim().length > 0 && (
+              <IonCard style={{ marginTop: '0', maxHeight: '400px', overflow: 'auto' }}>
+                {searching && (
+                  <IonCardContent style={{ textAlign: 'center', padding: '20px' }}>
+                    <IonSpinner />
+                    <IonText color="medium">
+                      <p>Searching...</p>
+                    </IonText>
+                  </IonCardContent>
+                )}
+
+                {!searching && searchResults.length === 0 && (
+                  <IonCardContent style={{ textAlign: 'center', padding: '20px' }}>
+                    <IonText color="medium">
+                      <p>No attendees found</p>
+                    </IonText>
+                  </IonCardContent>
+                )}
+
+                {!searching && searchResults.length > 0 && (
+                  <IonList>
+                    {searchResults.map((attendee, idx) => (
+                      <IonItem
+                        key={idx}
+                        button
+                        onClick={() => handleAttendeeSelect(attendee)}
+                        detail={false}
+                      >
+                        <IonLabel>
+                          <h2>{highlightMatch(attendee.name, searchQuery)}</h2>
+                          {attendee.company && (
+                            <p>{highlightMatch(attendee.company, searchQuery)}</p>
+                          )}
+                          {attendee.type && (
+                            <IonText color="medium">
+                              <p style={{ fontSize: '12px' }}>{attendee.type}</p>
+                            </IonText>
+                          )}
+                        </IonLabel>
+                      </IonItem>
+                    ))}
+                  </IonList>
+                )}
+              </IonCard>
+            )}
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (

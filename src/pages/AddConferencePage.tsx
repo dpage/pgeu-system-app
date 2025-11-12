@@ -37,7 +37,7 @@ const AddConferencePage: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
 
   const handleBack = () => {
-    navigate(-1);
+    navigate('/conferences', { state: { openModal: true } });
   };
 
   const handleSubmit = async () => {
@@ -53,8 +53,8 @@ const AddConferencePage: React.FC = () => {
     setIsSubmitting(false);
 
     if (success) {
-      // Navigate back to list on success
-      navigate('/conferences');
+      // Navigate back to list on success with modal open
+      navigate('/conferences', { state: { openModal: true } });
     }
     // On failure, error will be shown via the store's error state
   };

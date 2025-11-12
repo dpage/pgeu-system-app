@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IonPage,
   IonHeader,
@@ -11,7 +12,6 @@ import {
   IonTitle,
   IonContent,
   IonButtons,
-  IonBackButton,
   IonButton,
   IonIcon,
   IonCard,
@@ -23,7 +23,7 @@ import {
   IonRefresher,
   IonRefresherContent,
 } from '@ionic/react';
-import { helpCircleOutline, refreshCircle } from 'ionicons/icons';
+import { helpCircleOutline, refreshCircle, close } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
 import { StatsResponse } from '../types/api';
@@ -31,6 +31,7 @@ import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
 
 const StatsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,13 +58,40 @@ const StatsPage: React.FC = () => {
     setError(null);
 
     try {
-      const apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      console.log('[Stats] Active conference:', {
+        mode: activeConference.mode,
+        baseUrl: activeConference.baseUrl,
+        eventSlug: activeConference.eventSlug,
+        token: activeConference.token ? `${activeConference.token.substring(0, 10)}...` : 'missing',
+        fieldId: activeConference.fieldId,
+      });
+
+      // Build API URL based on conference mode
+      let apiUrl: string;
+      if (activeConference.mode === 'sponsor') {
+        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
+      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
+      } else {
+        // Default checkin mode
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      }
+
+      console.log('[Stats] Constructed API URL:', apiUrl);
+
       const apiClient = createApiClient(apiUrl);
       const statsData = await apiClient.getStats();
+      console.log('[Stats] Successfully loaded stats');
       setStats(statsData);
     } catch (err: any) {
       console.error('[Stats] Error loading stats:', err);
-      setError(err.message || 'Failed to load statistics');
+
+      // Provide more user-friendly error message for common cases
+      if (err.type === 'not_found') {
+        setError('Statistics are only available to superusers. Please log in with an admin account to view statistics.');
+      } else {
+        setError(err.message || 'Failed to load statistics');
+      }
     } finally {
       setLoading(false);
     }
@@ -83,7 +111,9 @@ const StatsPage: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/scanner" />
+            <IonButton onClick={() => navigate('/conferences')}>
+              <IonIcon slot="icon-only" icon={close} />
+            </IonButton>
           </IonButtons>
           <IonTitle>Statistics</IonTitle>
           <IonButtons slot="end">
