@@ -54,6 +54,27 @@ const ScannerPage: React.FC = () => {
     [conferences, activeConferenceId]
   );
 
+  // Generate scanner title based on mode
+  const scannerTitle = useMemo(() => {
+    if (!activeConference) return 'Scanner';
+
+    switch (activeConference.mode) {
+      case 'checkin':
+        return 'Check-In Scanner';
+      case 'sponsor':
+        return 'Sponsor Scanner';
+      case 'field':
+        if (activeConference.fieldId) {
+          // Capitalize first letter of fieldId
+          const fieldName = String(activeConference.fieldId);
+          return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} Scanner`;
+        }
+        return 'Field Scanner';
+      default:
+        return 'Scanner';
+    }
+  }, [activeConference]);
+
   const scan = async () => {
     console.log('[Scanner] scan() called');
     setStatus('Starting scan...');
@@ -104,23 +125,85 @@ const ScannerPage: React.FC = () => {
       }
 
       const qrCode = scanResponse.barcodes[0].rawValue;
+      console.log('[Scanner] Scanned QR code:', qrCode);
+
+      // Check for test barcode
+      try {
+        const scannedUrl = new URL(qrCode);
+        const testPath = '/t/id/TESTTESTTESTTEST/';
+
+        if (scannedUrl.pathname === testPath) {
+          console.log('[Scanner] Test barcode detected');
+
+          // Validate that the hostname matches the conference baseUrl
+          const conferenceUrl = new URL(activeConference.baseUrl);
+
+          if (scannedUrl.hostname === conferenceUrl.hostname) {
+            console.log('[Scanner] Test barcode validation successful');
+            setStatus('Camera test successful!');
+            setError(null);
+            setLoading(false);
+
+            // Show success message for a few seconds, then reset
+            setTimeout(() => {
+              reset();
+            }, 3000);
+            return;
+          } else {
+            console.log('[Scanner] Test barcode server mismatch');
+            setError(`Test barcode server mismatch. Expected: ${conferenceUrl.hostname}, Got: ${scannedUrl.hostname}`);
+            setStatus('Error');
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (urlError) {
+        // Not a valid URL or not a test barcode, continue with normal processing
+        console.log('[Scanner] QR code is not a valid URL or not a test barcode');
+      }
+
       setStatus('Looking up attendee...');
 
       // Lookup attendee via API
-      const apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      console.log('[Scanner] Active conference:', JSON.stringify({
+        id: activeConference.id,
+        name: activeConference.name,
+        baseUrl: activeConference.baseUrl,
+        eventSlug: activeConference.eventSlug,
+        mode: activeConference.mode,
+        fieldId: activeConference.fieldId,
+        token: activeConference.token ? '***' : undefined
+      }));
+
+      // Build API URL based on scan mode
+      let apiUrl: string;
+      if (activeConference.mode === 'sponsor') {
+        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
+      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
+      } else {
+        // Default check-in mode
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      }
+
+      console.log('[Scanner] API URL:', apiUrl);
       const apiClient = createApiClient(apiUrl);
 
       try {
+        console.log('[Scanner] Calling lookupAttendee...');
         const lookupResponse = await apiClient.lookupAttendee(qrCode);
+        console.log('[Scanner] Lookup response:', lookupResponse);
         const attendee = 'reg' in lookupResponse ? (lookupResponse.reg as CheckinRegistration) : null;
 
         if (!attendee) {
+          console.error('[Scanner] No attendee in response');
           setError('Invalid response from server');
           setStatus('Error');
           setLoading(false);
           return;
         }
 
+        console.log('[Scanner] Attendee found:', attendee.name);
         setScanResult({
           attendee,
           alreadyCheckedIn: !!attendee.already,
@@ -128,7 +211,10 @@ const ScannerPage: React.FC = () => {
         setStatus('Attendee found');
         setLoading(false);
       } catch (apiError: any) {
-        console.error('[Scanner] API error:', apiError);
+        console.error('[Scanner] API error (full):', JSON.stringify(apiError, null, 2));
+        console.error('[Scanner] API error message:', apiError.message);
+        console.error('[Scanner] API error type:', apiError.type);
+        console.error('[Scanner] API error details:', apiError.details);
         setError(apiError.message || 'Failed to lookup attendee');
         setStatus('Error');
         setLoading(false);
@@ -150,7 +236,17 @@ const ScannerPage: React.FC = () => {
     setError(null);
 
     try {
-      const apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      // Build API URL based on scan mode
+      let apiUrl: string;
+      if (activeConference.mode === 'sponsor') {
+        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
+      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
+      } else {
+        // Default check-in mode
+        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
+      }
+
       const apiClient = createApiClient(apiUrl);
 
       await apiClient.store({ token: scanResult.attendee.token });
@@ -181,7 +277,7 @@ const ScannerPage: React.FC = () => {
           <IonButtons slot="start">
             <IonBackButton defaultHref="/conferences" />
           </IonButtons>
-          <IonTitle>Check-In Scanner</IonTitle>
+          <IonTitle>{scannerTitle}</IonTitle>
           <IonButtons slot="end">
             <IonButton onClick={() => navigate('/stats')}>
               <IonIcon slot="icon-only" icon={statsChartOutline} />

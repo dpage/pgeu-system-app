@@ -1,10 +1,10 @@
 /**
  * API Client Service for pgeu-system backend
  * Handles all HTTP communication with conference scanner APIs
+ * Uses Capacitor HTTP to bypass CORS restrictions
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
+import { CapacitorHttp, HttpResponse, HttpOptions } from '@capacitor/core';
 import type {
   StatusResponse,
   LookupResponse,
@@ -20,7 +20,6 @@ import type {
  * API Client for pgeu-system backend
  */
 export class ApiClient {
-  private client: AxiosInstance;
   private baseUrl: string;
 
   /**
@@ -30,30 +29,78 @@ export class ApiClient {
   constructor(baseUrl: string) {
     // Ensure baseUrl ends with /
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  }
 
-    // Create axios instance
-    this.client = axios.create({
-      baseURL: this.baseUrl,
-      timeout: 10000, // Default 10s timeout
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'PGConfScanner/2.0.0',
-      },
-    });
+  /**
+   * Make HTTP request with retry logic
+   */
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    options?: {
+      params?: Record<string, string>;
+      data?: string;
+      timeout?: number;
+    }
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const maxRetries = 2;
+    let lastError: any;
 
-    // Configure retry logic
-    axiosRetry(this.client, {
-      retries: 2,
-      retryDelay: axiosRetry.exponentialDelay,
-      retryCondition: (error) => {
-        // Retry on network errors and 5xx server errors
-        return (
-          axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-          (error.response?.status !== undefined && error.response.status >= 500)
-        );
-      },
-      shouldResetTimeout: true,
-    });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const httpOptions: HttpOptions = {
+          url,
+          method,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'PGConfScanner/2.0.0',
+          },
+          connectTimeout: options?.timeout || 10000,
+          readTimeout: options?.timeout || 10000,
+        };
+
+        // Add query params for GET requests
+        if (method === 'GET' && options?.params) {
+          const searchParams = new URLSearchParams(options.params);
+          httpOptions.url = `${url}?${searchParams.toString()}`;
+        }
+
+        // Add body data for POST requests
+        if (method === 'POST' && options?.data) {
+          httpOptions.data = options.data;
+        }
+
+        console.log(`[ApiClient] ${method} ${httpOptions.url}`);
+        const response: HttpResponse = await CapacitorHttp.request(httpOptions);
+        console.log(`[ApiClient] Response status:`, response.status);
+
+        // Handle error status codes
+        if (response.status >= 400) {
+          throw this.handleHttpError(response);
+        }
+
+        return response.data as T;
+      } catch (error) {
+        lastError = error;
+
+        // Only retry on network errors or 5xx server errors
+        const shouldRetry =
+          attempt < maxRetries &&
+          (error instanceof Error && error.message.includes('network')) ||
+          (error as any).statusCode >= 500;
+
+        if (!shouldRetry) {
+          throw error;
+        }
+
+        // Exponential backoff delay
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError;
   }
 
   /**
@@ -63,10 +110,9 @@ export class ApiClient {
    */
   async getStatus(options?: ApiRequestOptions): Promise<StatusResponse> {
     try {
-      const response = await this.client.get<StatusResponse>('api/status/', {
+      return await this.request<StatusResponse>('GET', 'api/status/', {
         timeout: options?.timeout || 5000,
       });
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -80,11 +126,10 @@ export class ApiClient {
    */
   async lookupAttendee(qrCode: string, options?: ApiRequestOptions): Promise<LookupResponse> {
     try {
-      const response = await this.client.get<LookupResponse>('api/lookup/', {
+      return await this.request<LookupResponse>('GET', 'api/lookup/', {
         params: { lookup: qrCode },
         timeout: options?.timeout || 10000,
       });
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -98,11 +143,10 @@ export class ApiClient {
    */
   async searchAttendees(query: string, options?: ApiRequestOptions): Promise<SearchResponse> {
     try {
-      const response = await this.client.get<SearchResponse>('api/search/', {
+      return await this.request<SearchResponse>('GET', 'api/search/', {
         params: { search: query },
         timeout: options?.timeout || 10000,
       });
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -123,10 +167,10 @@ export class ApiClient {
         params.append('note', body.note);
       }
 
-      const response = await this.client.post<StoreResponse>('api/store/', params, {
+      return await this.request<StoreResponse>('POST', 'api/store/', {
+        data: params.toString(),
         timeout: options?.timeout || 15000,
       });
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -139,93 +183,100 @@ export class ApiClient {
    */
   async getStats(options?: ApiRequestOptions): Promise<StatsResponse> {
     try {
-      const response = await this.client.get<StatsResponse>('api/stats/', {
+      return await this.request<StatsResponse>('GET', 'api/stats/', {
         timeout: options?.timeout || 20000,
       });
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
   /**
-   * Handle axios errors and convert to ApiError
-   * @param error - Axios error
-   * @returns ApiError
+   * Handle HTTP error responses
    */
-  private handleError(error: unknown): ApiError {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
+  private handleHttpError(response: HttpResponse): ApiError {
+    const status = response.status;
+    const responseData = response.data;
 
-      // Network error or timeout
-      if (!axiosError.response) {
-        if (axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')) {
-          return {
-            type: 'timeout',
-            message: 'Request timed out. Check your connection and try again.',
-            details: axiosError.message,
-          };
-        }
-        return {
-          type: 'network_error',
-          message: 'No internet connection. Please check your network.',
-          details: axiosError.message,
-        };
-      }
-
-      // HTTP error responses
-      const status = axiosError.response.status;
-      const responseData = axiosError.response.data;
-
-      // Extract error message from response body if available
-      let serverMessage: string | undefined;
-      if (typeof responseData === 'string') {
+    // Extract error message from response body if available
+    let serverMessage: string | undefined;
+    if (typeof responseData === 'string') {
+      // Ignore HTML error pages (Django debug pages, server error pages, etc.)
+      const isHtml = responseData.trim().toLowerCase().startsWith('<!doctype') ||
+                     responseData.trim().toLowerCase().startsWith('<html');
+      if (!isHtml) {
         serverMessage = responseData;
-      } else if (responseData && typeof responseData === 'object' && 'message' in responseData) {
-        serverMessage = String(responseData.message);
       }
-
-      switch (status) {
-        case 404:
-          return {
-            type: 'not_found',
-            message: serverMessage || 'Attendee not found for this conference',
-            statusCode: status,
-          };
-        case 403:
-          return {
-            type: 'forbidden',
-            message: serverMessage || 'Access denied. Please check your conference registration.',
-            statusCode: status,
-          };
-        case 412:
-          return {
-            type: 'precondition_failed',
-            message: serverMessage || 'Operation cannot be completed',
-            statusCode: status,
-          };
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-          return {
-            type: 'server_error',
-            message: 'Server error. Please try again or contact support.',
-            statusCode: status,
-          };
-        default:
-          return {
-            type: 'unknown',
-            message: serverMessage || `Request failed with status ${status}`,
-            statusCode: status,
-          };
-      }
+    } else if (responseData && typeof responseData === 'object' && 'message' in responseData) {
+      serverMessage = String(responseData.message);
     }
 
-    // Non-axios error
+    switch (status) {
+      case 404:
+        return {
+          type: 'not_found',
+          message: serverMessage || 'The scanned QR code was not recognised or cannot be used for this type of scan',
+          statusCode: status,
+        };
+      case 403:
+        return {
+          type: 'forbidden',
+          message: serverMessage || 'Access denied. Please check your conference registration.',
+          statusCode: status,
+        };
+      case 412:
+        return {
+          type: 'precondition_failed',
+          message: serverMessage || 'Operation cannot be completed',
+          statusCode: status,
+        };
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        return {
+          type: 'server_error',
+          message: 'Server error. Please try again or contact support.',
+          statusCode: status,
+        };
+      default:
+        return {
+          type: 'unknown',
+          message: serverMessage || `Request failed with status ${status}`,
+          statusCode: status,
+        };
+    }
+  }
+
+  /**
+   * Handle general errors and convert to ApiError
+   */
+  private handleError(error: unknown): ApiError {
+    // If it's already an ApiError, return it
+    if (error && typeof error === 'object' && 'type' in error && 'message' in error) {
+      return error as ApiError;
+    }
+
+    // Network or timeout error
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        return {
+          type: 'timeout',
+          message: 'Request timed out. Check your connection and try again.',
+          details: error.message,
+        };
+      }
+      return {
+        type: 'network_error',
+        message: 'Network error. Please check your connection.',
+        details: error.message,
+      };
+    }
+
+    // Unknown error
     return {
       type: 'unknown',
-      message: error instanceof Error ? error.message : 'An unknown error occurred',
+      message: 'An unknown error occurred',
     };
   }
 }
