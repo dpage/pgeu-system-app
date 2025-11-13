@@ -4,7 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import StatsPage from './StatsPage';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
-import type { Conference, StatsResponse } from '../types/api';
+import type { StatsResponse } from '../types/api';
+import type { Conference } from '../types/conference';
 
 // Mock dependencies
 vi.mock('../store/conferenceStore');

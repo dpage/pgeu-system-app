@@ -3,8 +3,8 @@
  * Integrates with Capacitor App plugin to process URLs
  */
 
-import { App, URLOpenListenerEvent, PluginListenerHandle } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
+import { App, URLOpenListenerEvent } from '@capacitor/app';
+import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 
 export interface DeepLinkHandler {
   /**
@@ -32,7 +32,7 @@ export class DeepLinkService {
    * Initialize deep link handling
    * @param handler - Function to call when a deep link is received
    */
-  initialize(handler: DeepLinkHandler): void {
+  async initialize(handler: DeepLinkHandler): Promise<void> {
     this.handler = handler;
 
     // Only set up listener on native platforms
@@ -42,7 +42,7 @@ export class DeepLinkService {
     }
 
     // Set up listener for app URL opens
-    this.listener = App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
+    this.listener = await App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
       return await this.handleUrlOpen(event);
     });
   }
@@ -50,9 +50,9 @@ export class DeepLinkService {
   /**
    * Clean up deep link listener
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
     if (this.listener) {
-      this.listener.remove();
+      await this.listener.remove();
       this.listener = null;
     }
     this.handler = null;

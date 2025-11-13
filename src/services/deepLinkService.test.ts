@@ -18,23 +18,23 @@ describe('DeepLinkService', () => {
   beforeEach(() => {
     service = new DeepLinkService();
     mockHandler = vi.fn().mockResolvedValue(true);
-    mockListener = { remove: vi.fn() };
+    mockListener = { remove: vi.fn().mockResolvedValue(undefined) };
 
     // Reset all mocks
     vi.clearAllMocks();
 
     // Default: simulate native platform
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(App.addListener).mockReturnValue(mockListener);
+    vi.mocked(App.addListener).mockResolvedValue(mockListener);
   });
 
-  afterEach(() => {
-    service.destroy();
+  afterEach(async () => {
+    await service.destroy();
   });
 
   describe('initialize', () => {
-    it('should set up listener on native platform', () => {
-      service.initialize(mockHandler);
+    it('should set up listener on native platform', async () => {
+      await service.initialize(mockHandler);
 
       expect(App.addListener).toHaveBeenCalledWith(
         'appUrlOpen',
@@ -42,16 +42,16 @@ describe('DeepLinkService', () => {
       );
     });
 
-    it('should not set up listener on web platform', () => {
+    it('should not set up listener on web platform', async () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-      service.initialize(mockHandler);
+      await service.initialize(mockHandler);
 
       expect(App.addListener).not.toHaveBeenCalled();
     });
 
     it('should call handler when URL is received', async () => {
-      service.initialize(mockHandler);
+      await service.initialize(mockHandler);
 
       const addListenerCall = vi.mocked(App.addListener).mock.calls[0];
       const eventHandler = addListenerCall[1];
@@ -63,7 +63,7 @@ describe('DeepLinkService', () => {
 
     it('should handle errors from handler gracefully', async () => {
       const errorHandler = vi.fn().mockRejectedValue(new Error('Test error'));
-      service.initialize(errorHandler);
+      await service.initialize(errorHandler);
 
       const addListenerCall = vi.mocked(App.addListener).mock.calls[0];
       const eventHandler = addListenerCall[1];
@@ -80,10 +80,10 @@ describe('DeepLinkService', () => {
 
       // Manually trigger URL handling
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-      testService.initialize(mockHandler);
+      await testService.initialize(mockHandler);
 
       // Clear the handler
-      testService.destroy();
+      await testService.destroy();
 
       // Reinitialize without handler by creating new instance
       const serviceWithoutHandler = new DeepLinkService();
@@ -100,15 +100,15 @@ describe('DeepLinkService', () => {
   });
 
   describe('destroy', () => {
-    it('should remove listener when destroyed', () => {
-      service.initialize(mockHandler);
-      service.destroy();
+    it('should remove listener when destroyed', async () => {
+      await service.initialize(mockHandler);
+      await service.destroy();
 
       expect(mockListener.remove).toHaveBeenCalled();
     });
 
-    it('should handle destroy without initialization', () => {
-      expect(() => service.destroy()).not.toThrow();
+    it('should handle destroy without initialization', async () => {
+      await expect(service.destroy()).resolves.not.toThrow();
     });
   });
 
@@ -224,13 +224,13 @@ describe('DeepLinkService', () => {
       expect(mockHandler).toHaveBeenNthCalledWith(2, url2);
     });
 
-    it('should properly clean up and reinitialize', () => {
-      service.initialize(mockHandler);
-      service.destroy();
+    it('should properly clean up and reinitialize', async () => {
+      await service.initialize(mockHandler);
+      await service.destroy();
 
       expect(mockListener.remove).toHaveBeenCalledTimes(1);
 
-      service.initialize(mockHandler);
+      await service.initialize(mockHandler);
 
       expect(App.addListener).toHaveBeenCalledTimes(2);
     });
