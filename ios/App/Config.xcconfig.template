@@ -1,0 +1,6 @@
+// Configuration file for local development settings
+// Copy this file to Config.xcconfig and fill in your values
+
+// Your Apple Developer Team ID
+// Find this at: https://developer.apple.com/account/#/membership
+DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
