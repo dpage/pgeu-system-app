@@ -1,5 +1,8 @@
 # PGEU PGConf Scanner
 
+[![Tests](https://github.com/dpage/pgeu-system-app/workflows/Tests/badge.svg)](https://github.com/dpage/pgeu-system-app/actions/workflows/test.yml)
+[![CI](https://github.com/dpage/pgeu-system-app/workflows/Continuous%20Integration/badge.svg)](https://github.com/dpage/pgeu-system-app/actions/workflows/ci.yml)
+
 A cross-platform mobile application for conference attendee check-in and badge scanning, built with Ionic Framework and Capacitor for iOS and Android.
 
 ## Overview
@@ -148,6 +151,14 @@ npm run typecheck
 **Linting:**
 ```bash
 npm run lint
+```
+
+**Testing:**
+```bash
+npm test                # Run tests once
+npm run test:watch      # Run tests in watch mode
+npm run test:ui         # Run tests with UI
+npm run test:coverage   # Run tests with coverage report
 ```
 
 **Build:**

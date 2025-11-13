@@ -3,17 +3,16 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CapacitorBarcodeScanner } from '@capacitor/barcode-scanner';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { ScannerService } from './scannerService';
 
-// Mock Capacitor BarcodeScanner
-vi.mock('@capacitor/barcode-scanner', () => ({
-  CapacitorBarcodeScanner: {
-    scanBarcode: vi.fn(),
-  },
-  CapacitorBarcodeScannerTypeHint: {
-    QR_CODE: 0,
-    ALL: 17,
+// Mock Capacitor ML Kit BarcodeScanner
+vi.mock('@capacitor-mlkit/barcode-scanning', () => ({
+  BarcodeScanner: {
+    scan: vi.fn(),
+    isSupported: vi.fn(),
+    checkPermissions: vi.fn(),
+    requestPermissions: vi.fn(),
   },
 }));
 
@@ -26,23 +25,68 @@ describe('ScannerService', () => {
   });
 
   describe('isSupported', () => {
-    it('should return true (plugin handles platform support)', async () => {
+    it('should return true when scanner is supported', async () => {
+      vi.mocked(BarcodeScanner.isSupported).mockResolvedValue({ supported: true });
       const result = await service.isSupported();
       expect(result).toBe(true);
+    });
+
+    it('should return false when scanner is not supported', async () => {
+      vi.mocked(BarcodeScanner.isSupported).mockResolvedValue({ supported: false });
+      const result = await service.isSupported();
+      expect(result).toBe(false);
+    });
+
+    it('should return false on error', async () => {
+      vi.mocked(BarcodeScanner.isSupported).mockRejectedValue(new Error('Not available'));
+      const result = await service.isSupported();
+      expect(result).toBe(false);
     });
   });
 
   describe('checkPermission', () => {
-    it('should return prompt (permissions handled by plugin)', async () => {
+    it('should return granted when permission is granted', async () => {
+      vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValue({ camera: 'granted' });
+      const result = await service.checkPermission();
+      expect(result).toBe('granted');
+    });
+
+    it('should return denied when permission is denied', async () => {
+      vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValue({ camera: 'denied' });
+      const result = await service.checkPermission();
+      expect(result).toBe('denied');
+    });
+
+    it('should return prompt when permission is prompt', async () => {
+      vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValue({ camera: 'prompt' });
+      const result = await service.checkPermission();
+      expect(result).toBe('prompt');
+    });
+
+    it('should return prompt on error', async () => {
+      vi.mocked(BarcodeScanner.checkPermissions).mockRejectedValue(new Error('Failed'));
       const result = await service.checkPermission();
       expect(result).toBe('prompt');
     });
   });
 
   describe('requestPermission', () => {
-    it('should return prompt (permissions handled by plugin)', async () => {
+    it('should return granted when permission is granted', async () => {
+      vi.mocked(BarcodeScanner.requestPermissions).mockResolvedValue({ camera: 'granted' });
       const result = await service.requestPermission();
-      expect(result).toBe('prompt');
+      expect(result).toBe('granted');
+    });
+
+    it('should return denied when permission is denied', async () => {
+      vi.mocked(BarcodeScanner.requestPermissions).mockResolvedValue({ camera: 'denied' });
+      const result = await service.requestPermission();
+      expect(result).toBe('denied');
+    });
+
+    it('should return denied on error', async () => {
+      vi.mocked(BarcodeScanner.requestPermissions).mockRejectedValue(new Error('Failed'));
+      const result = await service.requestPermission();
+      expect(result).toBe('denied');
     });
   });
 
@@ -56,9 +100,15 @@ describe('ScannerService', () => {
     });
 
     it('should call onScan with valid ID token', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
-        format: 0, // QR_CODE
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [
+          {
+            rawValue: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
+            displayValue: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
+            format: 'QR_CODE' as any,
+            valueType: 'TEXT' as any,
+          },
+        ],
       });
 
       const cleanup = await service.startScan(onScan, onError);
@@ -71,9 +121,15 @@ describe('ScannerService', () => {
     });
 
     it('should call onScan with valid AT token', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: 'AT$abcdef1234567890abcdef1234567890abcdef12$AT',
-        format: 0,
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [
+          {
+            rawValue: 'AT$abcdef1234567890abcdef1234567890abcdef12$AT',
+            displayValue: 'AT$abcdef1234567890abcdef1234567890abcdef12$AT',
+            format: 'QR_CODE' as any,
+            valueType: 'TEXT' as any,
+          },
+        ],
       });
 
       const cleanup = await service.startScan(onScan, onError);
@@ -86,9 +142,15 @@ describe('ScannerService', () => {
     });
 
     it('should call onScan with test token', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: 'ID$TESTTESTTESTTEST$ID',
-        format: 0,
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [
+          {
+            rawValue: 'ID$TESTTESTTESTTEST$ID',
+            displayValue: 'ID$TESTTESTTESTTEST$ID',
+            format: 'QR_CODE' as any,
+            valueType: 'TEXT' as any,
+          },
+        ],
       });
 
       const cleanup = await service.startScan(onScan, onError);
@@ -101,9 +163,15 @@ describe('ScannerService', () => {
     });
 
     it('should call onError for invalid QR code', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: 'INVALID_QR_CODE',
-        format: 0,
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [
+          {
+            rawValue: 'INVALID_QR_CODE',
+            displayValue: 'INVALID_QR_CODE',
+            format: 'QR_CODE' as any,
+            valueType: 'TEXT' as any,
+          },
+        ],
       });
 
       const cleanup = await service.startScan(onScan, onError);
@@ -116,7 +184,7 @@ describe('ScannerService', () => {
     });
 
     it('should call onError when permission denied', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockRejectedValue(
+      vi.mocked(BarcodeScanner.scan).mockRejectedValue(
         new Error('Camera permission denied')
       );
 
@@ -130,9 +198,8 @@ describe('ScannerService', () => {
     });
 
     it('should not call callbacks when scan returns empty result', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: '',
-        format: 0,
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [],
       });
 
       const cleanup = await service.startScan(onScan, onError);
@@ -144,7 +211,7 @@ describe('ScannerService', () => {
     });
 
     it('should call onError on scanner exception', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockRejectedValue(
+      vi.mocked(BarcodeScanner.scan).mockRejectedValue(
         new Error('Camera failed')
       );
 
@@ -159,9 +226,15 @@ describe('ScannerService', () => {
     });
 
     it('should include timestamp in scan result', async () => {
-      vi.mocked(CapacitorBarcodeScanner.scanBarcode).mockResolvedValue({
-        ScanResult: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
-        format: 0,
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [
+          {
+            rawValue: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
+            displayValue: 'ID$abcdef1234567890abcdef1234567890abcdef12$ID',
+            format: 'QR_CODE' as any,
+            valueType: 'TEXT' as any,
+          },
+        ],
       });
 
       const beforeTime = Date.now();
@@ -176,9 +249,19 @@ describe('ScannerService', () => {
   });
 
   describe('prepare', () => {
-    it('should return ready (plugin handles all checks)', async () => {
+    it('should return ready when scanner is supported', async () => {
+      vi.mocked(BarcodeScanner.isSupported).mockResolvedValue({ supported: true });
       const result = await service.prepare();
       expect(result.ready).toBe(true);
+    });
+
+    it('should return not ready when scanner is not supported', async () => {
+      vi.mocked(BarcodeScanner.isSupported).mockResolvedValue({ supported: false });
+      const result = await service.prepare();
+      expect(result.ready).toBe(false);
+      if (!result.ready) {
+        expect(result.error.type).toBe('unsupported');
+      }
     });
   });
 

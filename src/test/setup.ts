@@ -16,6 +16,11 @@ vi.mock('@capacitor/core', () => ({
     isPluginAvailable: () => false,
   },
   registerPlugin: vi.fn(),
+  CapacitorHttp: {
+    get: vi.fn(),
+    post: vi.fn(),
+    request: vi.fn(),
+  },
 }));
 
 vi.mock('@capacitor/preferences', () => ({
@@ -36,6 +41,15 @@ vi.mock('@capacitor/barcode-scanner', () => ({
   CapacitorBarcodeScannerTypeHint: {
     QR_CODE: 0,
     ALL: 17,
+  },
+}));
+
+vi.mock('@capacitor-mlkit/barcode-scanning', () => ({
+  BarcodeScanner: {
+    scan: vi.fn(),
+    isSupported: vi.fn(),
+    checkPermissions: vi.fn(),
+    requestPermissions: vi.fn(),
   },
 }));
 
