@@ -793,7 +793,7 @@ const ConferenceListPage: React.FC = () => {
                         </IonLabel>
                       </IonItem>
                     )}
-                    {scanResult.partition && (
+                    {scanResult.partition && activeConference?.mode !== 'field' && (
                       <IonItem>
                         <IonLabel>
                           <strong>Partition:</strong> {scanResult.partition}
@@ -879,7 +879,14 @@ const ConferenceListPage: React.FC = () => {
                   }
                   style={{ marginTop: '20px' }}
                 >
-                  {checkingIn ? 'Checking In...' : 'Check In'}
+                  {checkingIn
+                    ? (activeConference?.mode === 'field'
+                        ? `Confirming ${activeConference.fieldId}...`
+                        : 'Checking In...')
+                    : (activeConference?.mode === 'field'
+                        ? `Confirm ${String(activeConference.fieldId).charAt(0).toUpperCase() + String(activeConference.fieldId).slice(1)}`
+                        : 'Check In')
+                  }
                 </IonButton>
               )}
 
