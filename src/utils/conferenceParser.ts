@@ -123,7 +123,7 @@ export function generateConferenceName(parsed: ParsedConferenceUrl): string {
 /**
  * Creates a Conference object from a parsed URL
  */
-export function createConferenceFromUrl(url: string): Conference | null {
+export function createConferenceFromUrl(url: string, displayName?: string): Conference | null {
   const parsed = parseConferenceUrl(url);
 
   if (!parsed) {
@@ -135,6 +135,7 @@ export function createConferenceFromUrl(url: string): Conference | null {
   return {
     id: generateConferenceId(parsed),
     name: generateConferenceName(parsed),
+    displayName,
     baseUrl: parsed.baseUrl,
     eventSlug: parsed.eventSlug,
     token: parsed.token,

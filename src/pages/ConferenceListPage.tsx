@@ -382,11 +382,8 @@ const ConferenceListPage: React.FC = () => {
   };
 
   const getDisplayName = (conference: any): string => {
-    if (conference.mode === 'sponsor') {
-      return 'Sponsor Scanning';
-    }
-    // For both field and regular check-in, just show the event name
-    return conference.eventSlug || 'Event';
+    // Use displayName from API if available, otherwise fall back to name
+    return conference.displayName || conference.name;
   };
 
   const getModeLabel = (mode: string, fieldId?: string | number | null): string => {
@@ -420,7 +417,11 @@ const ConferenceListPage: React.FC = () => {
     <IonPage>
       <IonHeader style={{ visibility: hideMainContent ? 'hidden' : 'visible' }}>
         <IonToolbar color="primary">
-          <IonTitle>Conference Scanner</IonTitle>
+          <IonTitle>
+            {activeConference
+              ? `PGConf Scanner: ${activeConference.displayName || activeConference.name}`
+              : 'PGConf Scanner'}
+          </IonTitle>
           <IonButtons slot="end">
             {activeConference?.mode === 'checkin' && (
               <IonButton onClick={handleStats}>

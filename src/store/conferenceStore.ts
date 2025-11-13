@@ -6,7 +6,8 @@
 import { create } from 'zustand';
 import { Conference } from '../types/conference';
 import { storageService } from '../services/storage';
-import { createConferenceFromUrl } from '../utils/conferenceParser';
+import { createConferenceFromUrl, parseConferenceUrl } from '../utils/conferenceParser';
+import { createApiClient } from '../services/apiClient';
 
 interface ConferenceState {
   // State
@@ -80,7 +81,39 @@ export const useConferenceStore = create<ConferenceState>((set, get) => ({
     set({ error: null });
 
     try {
-      const conference = createConferenceFromUrl(url);
+      // Parse the URL first to validate it
+      const parsed = parseConferenceUrl(url);
+
+      if (!parsed) {
+        set({ error: 'Invalid conference URL format' });
+        return false;
+      }
+
+      // Build API URL from parsed configuration
+      let apiUrl: string;
+      if (parsed.mode === 'sponsor') {
+        apiUrl = `${parsed.baseUrl}/events/sponsor/scanning/${parsed.token}/`;
+      } else if (parsed.mode === 'field') {
+        apiUrl = `${parsed.baseUrl}/events/${parsed.eventSlug}/checkin/${parsed.token}/f${parsed.fieldId}/`;
+      } else {
+        // checkin mode
+        apiUrl = `${parsed.baseUrl}/events/${parsed.eventSlug}/checkin/${parsed.token}/`;
+      }
+
+      // Fetch friendly name from API
+      let displayName: string | undefined;
+      try {
+        const apiClient = createApiClient(apiUrl);
+        const status = await apiClient.getStatus({ timeout: 10000 });
+        displayName = status.confname;
+        console.log('[ConferenceStore] Fetched conference name from API:', displayName);
+      } catch (error) {
+        console.warn('[ConferenceStore] Failed to fetch conference name, continuing without it:', error);
+        // Continue without displayName - we'll use the generated name
+      }
+
+      // Create conference with the fetched displayName
+      const conference = createConferenceFromUrl(url, displayName);
 
       if (!conference) {
         set({ error: 'Invalid conference URL format' });

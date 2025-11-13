@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'eu.postgresql.pgconfscanner',
-  appName: 'PGConfScanner',
+  appName: 'PGConf Scanner',
   webDir: 'build'
 };
 

@@ -18,6 +18,9 @@ export interface Conference {
   /** Display name of the conference */
   name: string;
 
+  /** Friendly display name from API (e.g., 'PGConf EU 2025') */
+  displayName?: string;
+
   /** Base URL (e.g., https://postgresql.eu) */
   baseUrl: string;
 
