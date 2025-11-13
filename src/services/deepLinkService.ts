@@ -3,7 +3,7 @@
  * Integrates with Capacitor App plugin to process URLs
  */
 
-import { App, URLOpenListenerEvent } from '@capacitor/app';
+import { App, URLOpenListenerEvent, PluginListenerHandle } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
 export interface DeepLinkHandler {
@@ -26,7 +26,7 @@ export interface DeepLinkResult {
  */
 export class DeepLinkService {
   private handler: DeepLinkHandler | null = null;
-  private listener: any = null;
+  private listener: PluginListenerHandle | null = null;
 
   /**
    * Initialize deep link handling

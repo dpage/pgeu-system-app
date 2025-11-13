@@ -45,7 +45,7 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const maxRetries = 2;
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -85,10 +85,11 @@ export class ApiClient {
         lastError = error;
 
         // Only retry on network errors or 5xx server errors
+        const apiError = error as ApiError;
         const shouldRetry =
           attempt < maxRetries &&
           (error instanceof Error && error.message.includes('network')) ||
-          (error as any).statusCode >= 500;
+          (apiError.statusCode !== undefined && apiError.statusCode >= 500);
 
         if (!shouldRetry) {
           throw error;

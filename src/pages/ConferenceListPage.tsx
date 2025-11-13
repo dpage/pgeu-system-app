@@ -31,10 +31,11 @@ import {
   IonModal,
   IonTextarea,
 } from '@ionic/react';
-import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, checkmarkCircle, closeCircle, stopCircle } from 'ionicons/icons';
+import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, closeCircle, stopCircle } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
-import { CheckinRegistration, SponsorRegistration } from '../types/api';
+import { CheckinRegistration, SponsorRegistration, ApiError } from '../types/api';
+import { Conference } from '../types/conference';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -207,9 +208,9 @@ const ConferenceListPage: React.FC = () => {
 
           setScanError(null);
           setIsScanning(false);
-        } catch (apiError: any) {
+        } catch (apiError: unknown) {
           console.error('[Scanner] API error:', apiError);
-          setScanError(apiError.message || 'Failed to lookup attendee');
+          setScanError(apiError instanceof Error ? apiError.message : 'Failed to lookup attendee');
           setScanResult(null);
           setIsScanning(false);
         }
@@ -264,9 +265,9 @@ const ConferenceListPage: React.FC = () => {
         setSponsorNotes('');
         setHideMainContent(false);
       }, 500);
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       console.error('[Scanner] Check-in error:', apiError);
-      setScanError(apiError.message || 'Failed to check in');
+      setScanError(apiError instanceof Error ? apiError.message : 'Failed to check in');
       setCheckingIn(false);
     }
   };
@@ -338,13 +339,14 @@ const ConferenceListPage: React.FC = () => {
 
       // Set results (with longer debounce, race conditions are less likely)
       setSearchResults(searchResponse.regs || []);
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
+      const error = apiError as ApiError;
       console.error('[ConferenceList] Search error:', {
         query: trimmedQuery,
         error: apiError,
-        errorType: apiError?.type,
-        errorMessage: apiError?.message,
-        statusCode: apiError?.statusCode,
+        errorType: error?.type,
+        errorMessage: error?.message,
+        statusCode: error?.statusCode,
       });
 
       // Clear results on error
@@ -417,7 +419,7 @@ const ConferenceListPage: React.FC = () => {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  const getDisplayName = (conference: any): string => {
+  const getDisplayName = (conference: Conference): string => {
     // Use displayName from API if available, otherwise fall back to name
     return conference.displayName || conference.name;
   };

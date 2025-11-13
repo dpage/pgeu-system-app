@@ -25,6 +25,7 @@ module.exports = {
     es2021: true,
     node: true,
   },
+  ignorePatterns: ['archive/**/*', 'src-react-native/**/*', 'dist/**/*', 'build/**/*', 'node_modules/**/*', 'ios/**/*', 'android/**/*'],
   rules: {
     // TypeScript specific rules
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import AddConferencePage from './AddConferencePage';
 import { useConferenceStore } from '../store/conferenceStore';
@@ -117,8 +117,6 @@ describe('AddConferencePage', () => {
       renderWithRouter(<AddConferencePage />);
       const urlInput = screen.getByPlaceholderText('https://postgresql.eu/events/...');
       const ionInput = urlInput.closest('ion-input')!;
-      const addButtons = screen.getAllByText('Add Conference');
-      const addButton = addButtons[addButtons.length - 1]; // Get the button (last element)
 
       await ionInputChange(ionInput, 'https://postgresql.eu/test');
 

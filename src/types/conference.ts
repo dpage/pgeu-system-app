@@ -79,7 +79,7 @@ export const VALID_DOMAINS = [
  * https://{domain}/events/sponsor/scanning/{token}/
  */
 export const URL_PATTERNS = {
-  checkin: /^https?:\/\/([^\/]+)\/events\/([^\/]+)\/checkin\/([a-f0-9]{40,64})\/$/,
-  fieldCheckin: /^https?:\/\/([^\/]+)\/events\/([^\/]+)\/checkin\/([a-f0-9]{40,64})\/f([a-z0-9]+)\/$/,
-  sponsor: /^https?:\/\/([^\/]+)\/events\/sponsor\/scanning\/([a-f0-9]{40,64})\/$/,
+  checkin: /^https?:\/\/([^/]+)\/events\/([^/]+)\/checkin\/([a-f0-9]{40,64})\/$/,
+  fieldCheckin: /^https?:\/\/([^/]+)\/events\/([^/]+)\/checkin\/([a-f0-9]{40,64})\/f([a-z0-9]+)\/$/,
+  sponsor: /^https?:\/\/([^/]+)\/events\/sponsor\/scanning\/([a-f0-9]{40,64})\/$/,
 } as const;

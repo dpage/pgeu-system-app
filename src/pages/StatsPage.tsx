@@ -3,7 +3,7 @@
  * Displays statistics for the active conference (admin only)
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   IonPage,
@@ -26,7 +26,7 @@ import {
 import { helpCircleOutline, refreshCircle, close } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
-import { StatsResponse } from '../types/api';
+import { StatsResponse, ApiError } from '../types/api';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
 
@@ -47,7 +47,7 @@ const StatsPage: React.FC = () => {
     [conferences, activeConferenceId]
   );
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!activeConference) {
       setError('No active conference selected');
       setLoading(false);
@@ -83,23 +83,24 @@ const StatsPage: React.FC = () => {
       const statsData = await apiClient.getStats();
       console.log('[Stats] Successfully loaded stats');
       setStats(statsData);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       console.error('[Stats] Error loading stats:', err);
 
       // Provide more user-friendly error message for common cases
-      if (err.type === 'not_found') {
+      if (error.type === 'not_found') {
         setError('Statistics are only available to superusers. Please log in with an admin account to view statistics.');
       } else {
-        setError(err.message || 'Failed to load statistics');
+        setError(error.message || 'Failed to load statistics');
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeConference]);
 
   useEffect(() => {
     loadStats();
-  }, [activeConference]);
+  }, [loadStats]);
 
   const handleRefresh = async (event: CustomEvent) => {
     await loadStats();
