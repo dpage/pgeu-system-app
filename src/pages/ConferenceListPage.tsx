@@ -29,11 +29,12 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonModal,
+  IonTextarea,
 } from '@ionic/react';
 import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, checkmarkCircle, closeCircle, stopCircle } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import { createApiClient } from '../services/apiClient';
-import { CheckinRegistration } from '../types/api';
+import { CheckinRegistration, SponsorRegistration } from '../types/api';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -47,10 +48,11 @@ const ConferenceListPage: React.FC = () => {
 
   // Scanning state
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<CheckinRegistration | null>(null);
+  const [scanResult, setScanResult] = useState<CheckinRegistration | SponsorRegistration | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
+  const [sponsorNotes, setSponsorNotes] = useState<string>('');
 
   const {
     conferences,
@@ -181,7 +183,7 @@ const ConferenceListPage: React.FC = () => {
 
         try {
           const lookupResponse = await apiClient.lookupAttendee(qrCode);
-          const attendee = 'reg' in lookupResponse ? (lookupResponse.reg as CheckinRegistration) : null;
+          const attendee = 'reg' in lookupResponse ? lookupResponse.reg : null;
 
           if (!attendee) {
             setScanError('Invalid response from server');
@@ -192,7 +194,17 @@ const ConferenceListPage: React.FC = () => {
 
           console.log('[Scanner] Attendee found:', attendee.name);
           setScanResult(attendee);
-          setAlreadyCheckedIn(!!attendee.already);
+
+          // For sponsor scans, pre-populate notes if they exist
+          if (activeConf.mode === 'sponsor' && !isCheckinRegistration(attendee)) {
+            setSponsorNotes(attendee.note || '');
+          }
+
+          // Check-in registrations have the 'already' field
+          if (isCheckinRegistration(attendee)) {
+            setAlreadyCheckedIn(!!attendee.already);
+          }
+
           setScanError(null);
           setIsScanning(false);
         } catch (apiError: any) {
@@ -235,7 +247,13 @@ const ConferenceListPage: React.FC = () => {
       }
 
       const apiClient = createApiClient(apiUrl);
-      await apiClient.store({ token: scanResult.token });
+
+      // Include notes for sponsor scans
+      const storeData = activeConf.mode === 'sponsor'
+        ? { token: scanResult.token, note: sponsorNotes }
+        : { token: scanResult.token };
+
+      await apiClient.store(storeData);
 
       // Check-in successful - return to home screen after brief delay
       setCheckingIn(false);
@@ -243,6 +261,7 @@ const ConferenceListPage: React.FC = () => {
         setScanResult(null);
         setScanError(null);
         setAlreadyCheckedIn(false);
+        setSponsorNotes('');
         setHideMainContent(false);
       }, 500);
     } catch (apiError: any) {
@@ -256,6 +275,7 @@ const ConferenceListPage: React.FC = () => {
     setScanResult(null);
     setScanError(null);
     setAlreadyCheckedIn(false);
+    setSponsorNotes('');
   };
 
   const cancelScan = async () => {
@@ -360,6 +380,11 @@ const ConferenceListPage: React.FC = () => {
     // Show attendee in scan result modal
     setScanResult(attendee);
     setAlreadyCheckedIn(!!attendee.already);
+  };
+
+  // Type guard to check if registration is CheckinRegistration
+  const isCheckinRegistration = (reg: CheckinRegistration | SponsorRegistration): reg is CheckinRegistration => {
+    return 'type' in reg;
   };
 
   const highlightMatch = (text: string, query: string): JSX.Element => {
@@ -753,153 +778,241 @@ const ConferenceListPage: React.FC = () => {
 
           {scanResult && !isScanning && (
             <div style={{ marginTop: '20px' }}>
-              {/* Already Checked In Warning */}
-              {alreadyCheckedIn && scanResult.already && (
-                <IonCard color="warning">
-                  <IonCardHeader>
-                    <IonCardTitle>{scanResult.already.title}</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent>
-                    <IonText>
-                      <p>{scanResult.already.body}</p>
-                    </IonText>
-                  </IonCardContent>
-                </IonCard>
-              )}
+              {/* Sponsor Scan UI */}
+              {activeConference?.mode === 'sponsor' && !isCheckinRegistration(scanResult) ? (
+                <>
+                  {/* Sponsor Attendee Details Card */}
+                  <IonCard>
+                    <IonCardHeader>
+                      <IonCardTitle>{scanResult.name}</IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <IonList>
+                        {scanResult.email && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Email:</strong> {scanResult.email}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        {scanResult.company && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Company:</strong> {scanResult.company}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        {scanResult.country && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Country:</strong> {scanResult.country}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                      </IonList>
 
-              {/* Attendee Details Card */}
-              <IonCard>
-                <IonCardHeader>
-                  <IonCardTitle>{scanResult.name}</IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonList>
-                    {scanResult.company && (
-                      <IonItem>
-                        <IonLabel>
-                          <strong>Company:</strong> {scanResult.company}
-                        </IonLabel>
-                      </IonItem>
-                    )}
-                    <IonItem>
-                      <IonLabel>
-                        <strong>Type:</strong> {scanResult.type}
-                      </IonLabel>
-                    </IonItem>
-                    {scanResult.tshirt && (
-                      <IonItem>
-                        <IonLabel>
-                          <strong>T-Shirt:</strong> {scanResult.tshirt}
-                        </IonLabel>
-                      </IonItem>
-                    )}
-                    {scanResult.partition && activeConference?.mode !== 'field' && (
-                      <IonItem>
-                        <IonLabel>
-                          <strong>Partition:</strong> {scanResult.partition}
-                        </IonLabel>
-                      </IonItem>
-                    )}
-                    {scanResult.photoconsent && (
-                      <IonItem>
-                        <IonLabel>
-                          <strong>Photo Consent:</strong> {scanResult.photoconsent}
-                        </IonLabel>
-                      </IonItem>
-                    )}
-                    {scanResult.policyconfirmed && (
-                      <IonItem>
-                        <IonLabel>
-                          <strong>Policy:</strong>{' '}
-                          {scanResult.policyconfirmed.toLowerCase().includes('no') ? (
-                            <>
-                              <IonIcon
-                                icon={stopCircle}
-                                color="danger"
-                                style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: '4px' }}
-                              />
-                              NOT CONFIRMED
-                            </>
-                          ) : (
-                            'Confirmed'
-                          )}
-                        </IonLabel>
-                      </IonItem>
-                    )}
-                  </IonList>
+                      {/* Highlight Badges */}
+                      {scanResult.highlight && scanResult.highlight.length > 0 && (
+                        <div style={{ marginTop: '15px' }}>
+                          {scanResult.highlight.map((hl, idx) => (
+                            <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
+                              {hl}
+                            </IonBadge>
+                          ))}
+                        </div>
+                      )}
 
-                  {/* Highlight Badges */}
-                  {scanResult.highlight && scanResult.highlight.length > 0 && (
-                    <div style={{ marginTop: '15px' }}>
-                      {scanResult.highlight
-                        .filter(hl => !hl.toLowerCase().includes('policyconfirmed'))
-                        .map((hl, idx) => (
-                          <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
-                            {hl}
-                          </IonBadge>
-                        ))}
-                    </div>
-                  )}
+                      {/* Notes Input */}
+                      <div style={{ marginTop: '20px' }}>
+                        <IonItem>
+                          <IonLabel position="stacked">Notes</IonLabel>
+                          <IonTextarea
+                            value={sponsorNotes}
+                            onIonInput={(e) => setSponsorNotes(e.detail.value || '')}
+                            placeholder="Enter notes about this lead..."
+                            rows={4}
+                            disabled={checkingIn}
+                          />
+                        </IonItem>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
 
-                  {/* Additional Information */}
-                  {scanResult.additional && scanResult.additional.length > 0 && (
-                    <div style={{ marginTop: '15px' }}>
-                      <IonText color="medium">
-                        <p><strong>Additional Info:</strong></p>
-                      </IonText>
-                      {scanResult.additional.map((info, idx) => (
-                        <IonText key={idx}>
-                          <p style={{ marginTop: '5px', fontSize: '14px' }}>{info}</p>
+                  {/* Save Lead Button */}
+                  <IonButton
+                    expand="block"
+                    size="large"
+                    color="success"
+                    onClick={checkIn}
+                    disabled={checkingIn}
+                    style={{ marginTop: '20px' }}
+                  >
+                    {checkingIn ? 'Saving Lead...' : 'Save Lead'}
+                  </IonButton>
+
+                  <IonButton
+                    expand="block"
+                    fill="outline"
+                    onClick={() => {
+                      resetScan();
+                    }}
+                    style={{ marginTop: '16px' }}
+                  >
+                    Cancel
+                  </IonButton>
+                </>
+              ) : isCheckinRegistration(scanResult) ? (
+                /* Check-in Scan UI */
+                <>
+                  {/* Already Checked In Warning */}
+                  {alreadyCheckedIn && scanResult.already && (
+                    <IonCard color="warning">
+                      <IonCardHeader>
+                        <IonCardTitle>{scanResult.already.title}</IonCardTitle>
+                      </IonCardHeader>
+                      <IonCardContent>
+                        <IonText>
+                          <p>{scanResult.already.body}</p>
                         </IonText>
-                      ))}
-                    </div>
+                      </IonCardContent>
+                    </IonCard>
                   )}
 
-                  {/* Check-in Message */}
-                  {scanResult.checkinmessage && (
-                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-                      <IonText>
-                        <p style={{ margin: 0 }}>{scanResult.checkinmessage}</p>
-                      </IonText>
-                    </div>
+                  {/* Attendee Details Card */}
+                  <IonCard>
+                    <IonCardHeader>
+                      <IonCardTitle>{scanResult.name}</IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <IonList>
+                        {scanResult.company && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Company:</strong> {scanResult.company}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        <IonItem>
+                          <IonLabel>
+                            <strong>Type:</strong> {scanResult.type}
+                          </IonLabel>
+                        </IonItem>
+                        {scanResult.tshirt && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>T-Shirt:</strong> {scanResult.tshirt}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        {scanResult.partition && activeConference?.mode !== 'field' && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Partition:</strong> {scanResult.partition}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        {scanResult.photoconsent && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Photo Consent:</strong> {scanResult.photoconsent}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                        {scanResult.policyconfirmed && (
+                          <IonItem>
+                            <IonLabel>
+                              <strong>Policy:</strong>{' '}
+                              {scanResult.policyconfirmed.toLowerCase().includes('no') ? (
+                                <>
+                                  <IonIcon
+                                    icon={stopCircle}
+                                    color="danger"
+                                    style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: '4px' }}
+                                  />
+                                  NOT CONFIRMED
+                                </>
+                              ) : (
+                                'Confirmed'
+                              )}
+                            </IonLabel>
+                          </IonItem>
+                        )}
+                      </IonList>
+
+                      {/* Highlight Badges */}
+                      {scanResult.highlight && scanResult.highlight.length > 0 && (
+                        <div style={{ marginTop: '15px' }}>
+                          {scanResult.highlight
+                            .filter(hl => !hl.toLowerCase().includes('policyconfirmed'))
+                            .map((hl, idx) => (
+                              <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
+                                {hl}
+                              </IonBadge>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Additional Information */}
+                      {scanResult.additional && scanResult.additional.length > 0 && (
+                        <div style={{ marginTop: '15px' }}>
+                          <IonText color="medium">
+                            <p><strong>Additional Info:</strong></p>
+                          </IonText>
+                          {scanResult.additional.map((info, idx) => (
+                            <IonText key={idx}>
+                              <p style={{ marginTop: '5px', fontSize: '14px' }}>{info}</p>
+                            </IonText>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Check-in Message */}
+                      {scanResult.checkinmessage && (
+                        <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+                          <IonText>
+                            <p style={{ margin: 0 }}>{scanResult.checkinmessage}</p>
+                          </IonText>
+                        </div>
+                      )}
+                    </IonCardContent>
+                  </IonCard>
+
+                  {/* Check-In Button */}
+                  {!alreadyCheckedIn && (
+                    <IonButton
+                      expand="block"
+                      size="large"
+                      color="success"
+                      onClick={checkIn}
+                      disabled={
+                        checkingIn ||
+                        Boolean(scanResult.policyconfirmed && scanResult.policyconfirmed.toLowerCase().includes('no'))
+                      }
+                      style={{ marginTop: '20px' }}
+                    >
+                      {checkingIn
+                        ? (activeConference?.mode === 'field'
+                            ? `Confirming ${activeConference.fieldId}...`
+                            : 'Checking In...')
+                        : (activeConference?.mode === 'field'
+                            ? `Confirm ${String(activeConference.fieldId).charAt(0).toUpperCase() + String(activeConference.fieldId).slice(1)}`
+                            : 'Check In')
+                      }
+                    </IonButton>
                   )}
-                </IonCardContent>
-              </IonCard>
 
-              {/* Check-In Button */}
-              {!alreadyCheckedIn && (
-                <IonButton
-                  expand="block"
-                  size="large"
-                  color="success"
-                  onClick={checkIn}
-                  disabled={
-                    checkingIn ||
-                    Boolean(scanResult.policyconfirmed && scanResult.policyconfirmed.toLowerCase().includes('no'))
-                  }
-                  style={{ marginTop: '20px' }}
-                >
-                  {checkingIn
-                    ? (activeConference?.mode === 'field'
-                        ? `Confirming ${activeConference.fieldId}...`
-                        : 'Checking In...')
-                    : (activeConference?.mode === 'field'
-                        ? `Confirm ${String(activeConference.fieldId).charAt(0).toUpperCase() + String(activeConference.fieldId).slice(1)}`
-                        : 'Check In')
-                  }
-                </IonButton>
-              )}
-
-              <IonButton
-                expand="block"
-                fill="outline"
-                onClick={() => {
-                  resetScan();
-                }}
-                style={{ marginTop: '16px' }}
-              >
-                Cancel
-              </IonButton>
+                  <IonButton
+                    expand="block"
+                    fill="outline"
+                    onClick={() => {
+                      resetScan();
+                    }}
+                    style={{ marginTop: '16px' }}
+                  >
+                    Cancel
+                  </IonButton>
+                </>
+              ) : null}
             </div>
           )}
         </IonContent>
