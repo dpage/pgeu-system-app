@@ -918,7 +918,7 @@ const ConferenceListPage: React.FC = () => {
                             </IonLabel>
                           </IonItem>
                         )}
-                        {scanResult.policyconfirmed && (
+                        {scanResult.policyconfirmed && activeConference?.mode !== 'field' && (
                           <IonItem>
                             <IonLabel>
                               <strong>Policy:</strong>{' '}
@@ -978,28 +978,38 @@ const ConferenceListPage: React.FC = () => {
                   </IonCard>
 
                   {/* Check-In Button */}
-                  {!alreadyCheckedIn && (
-                    <IonButton
-                      expand="block"
-                      size="large"
-                      color="success"
-                      onClick={checkIn}
-                      disabled={
-                        checkingIn ||
-                        Boolean(scanResult.policyconfirmed && scanResult.policyconfirmed.toLowerCase().includes('no'))
-                      }
-                      style={{ marginTop: '20px' }}
-                    >
-                      {checkingIn
-                        ? (activeConference?.mode === 'field'
-                            ? `Confirming ${activeConference.fieldId}...`
-                            : 'Checking In...')
-                        : (activeConference?.mode === 'field'
-                            ? `Confirm ${String(activeConference.fieldId).charAt(0).toUpperCase() + String(activeConference.fieldId).slice(1)}`
-                            : 'Check In')
-                      }
-                    </IonButton>
-                  )}
+                  {!alreadyCheckedIn && (() => {
+                    const policyNotConfirmed = activeConference?.mode !== 'field' && Boolean(scanResult.policyconfirmed && scanResult.policyconfirmed.toLowerCase().includes('no'));
+                    const isDisabled = checkingIn || policyNotConfirmed;
+
+                    return (
+                      <IonButton
+                        expand="block"
+                        size="large"
+                        color={policyNotConfirmed ? "danger" : "success"}
+                        onClick={checkIn}
+                        disabled={isDisabled}
+                        style={{
+                          marginTop: '20px',
+                          ...(policyNotConfirmed && {
+                            '--background': 'rgba(var(--ion-color-danger-rgb), 0.4)',
+                            '--background-hover': 'rgba(var(--ion-color-danger-rgb), 0.4)',
+                            '--background-activated': 'rgba(var(--ion-color-danger-rgb), 0.4)',
+                            '--background-focused': 'rgba(var(--ion-color-danger-rgb), 0.4)',
+                          })
+                        }}
+                      >
+                        {checkingIn
+                          ? (activeConference?.mode === 'field'
+                              ? `Confirming ${activeConference.fieldId}...`
+                              : 'Checking In...')
+                          : (activeConference?.mode === 'field'
+                              ? `Confirm ${String(activeConference.fieldId).charAt(0).toUpperCase() + String(activeConference.fieldId).slice(1)}`
+                              : 'Check In')
+                        }
+                      </IonButton>
+                    );
+                  })()}
 
                   <IonButton
                     expand="block"
