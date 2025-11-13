@@ -107,6 +107,9 @@ const ConferenceListPage: React.FC = () => {
       return;
     }
 
+    // Hide main content before starting scan
+    setHideMainContent(true);
+
     // Start scanning directly
     startScan();
   };
@@ -233,11 +236,18 @@ const ConferenceListPage: React.FC = () => {
 
       const apiClient = createApiClient(apiUrl);
       await apiClient.store({ token: scanResult.token });
-      setAlreadyCheckedIn(true);
+
+      // Check-in successful - return to home screen after brief delay
+      setCheckingIn(false);
+      setTimeout(() => {
+        setScanResult(null);
+        setScanError(null);
+        setAlreadyCheckedIn(false);
+        setHideMainContent(false);
+      }, 500);
     } catch (apiError: any) {
       console.error('[Scanner] Check-in error:', apiError);
       setScanError(apiError.message || 'Failed to check in');
-    } finally {
       setCheckingIn(false);
     }
   };
@@ -255,6 +265,7 @@ const ConferenceListPage: React.FC = () => {
       document.body.classList.remove('barcode-scanner-active');
       setIsScanning(false);
       setScanError(null);
+      setHideMainContent(false);
     } catch (error) {
       console.error('[Scanner] Error cancelling scan:', error);
     }
@@ -389,11 +400,11 @@ const ConferenceListPage: React.FC = () => {
   const getModeLabel = (mode: string, fieldId?: string | number | null): string => {
     switch (mode) {
       case 'checkin':
-        return 'check-in';
+        return 'Check-In';
       case 'sponsor':
-        return 'sponsor-scan';
+        return 'Sponsor Scanning';
       case 'field':
-        return fieldId ? String(fieldId) : 'field-scan';
+        return fieldId ? `Field Check-In: ${fieldId}` : 'Field Check-In';
       default:
         return mode;
     }
@@ -417,11 +428,7 @@ const ConferenceListPage: React.FC = () => {
     <IonPage>
       <IonHeader style={{ visibility: hideMainContent ? 'hidden' : 'visible' }}>
         <IonToolbar color="primary">
-          <IonTitle>
-            {activeConference
-              ? `PGConf Scanner: ${activeConference.displayName || activeConference.name}`
-              : 'PGConf Scanner'}
-          </IonTitle>
+          <IonTitle>PGConf Scanner</IonTitle>
           <IonButtons slot="end">
             {activeConference?.mode === 'checkin' && (
               <IonButton onClick={handleStats}>
@@ -465,8 +472,43 @@ const ConferenceListPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Scan Button - Shown when conferences exist */}
-            <div className="ion-padding" style={{ visibility: hideMainContent ? 'hidden' : 'visible' }}>
+            {/* Conference Info Sub-header */}
+            {activeConference && (
+              <div style={{
+                visibility: hideMainContent ? 'hidden' : 'visible',
+                textAlign: 'center',
+                padding: '24px 16px 0 16px',
+                borderBottom: '1px solid var(--ion-border-color, #ddd)',
+                backgroundColor: 'var(--ion-background-color, #fff)'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  color: 'var(--ion-color-dark)',
+                  marginBottom: '4px'
+                }}>
+                  {activeConference.displayName || activeConference.name}
+                </div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  color: 'var(--ion-color-step-600)',
+                  marginBottom: '16px'
+                }}>
+                  {getModeLabel(activeConference.mode, activeConference.fieldId)}
+                </div>
+              </div>
+            )}
+
+            {/* Vertically centered scanning controls */}
+            <div style={{
+              visibility: hideMainContent ? 'hidden' : 'visible',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              minHeight: 'calc(100vh - 56px - 60px - 100px)', // viewport - header - footer - subheader
+              padding: '16px'
+            }}>
               <IonButton
                 expand="block"
                 size="large"
@@ -657,6 +699,7 @@ const ConferenceListPage: React.FC = () => {
           setScanResult(null);
           setScanError(null);
           setAlreadyCheckedIn(false);
+          setHideMainContent(false);
         }}
       >
         <IonHeader>
@@ -670,6 +713,7 @@ const ConferenceListPage: React.FC = () => {
                 setScanResult(null);
                 setScanError(null);
                 setAlreadyCheckedIn(false);
+                setHideMainContent(false);
               }}>
                 <IonIcon slot="icon-only" icon={close} />
               </IonButton>
@@ -766,13 +810,18 @@ const ConferenceListPage: React.FC = () => {
                     {scanResult.policyconfirmed && (
                       <IonItem>
                         <IonLabel>
-                          <strong>Policy Confirmed:</strong> {scanResult.policyconfirmed}
-                          {scanResult.policyconfirmed.toLowerCase().includes('no') && (
-                            <IonIcon
-                              icon={stopCircle}
-                              color="danger"
-                              style={{ marginLeft: '8px', fontSize: '20px', verticalAlign: 'middle' }}
-                            />
+                          <strong>Policy:</strong>{' '}
+                          {scanResult.policyconfirmed.toLowerCase().includes('no') ? (
+                            <>
+                              <IonIcon
+                                icon={stopCircle}
+                                color="danger"
+                                style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: '4px' }}
+                              />
+                              NOT CONFIRMED
+                            </>
+                          ) : (
+                            'Confirmed'
                           )}
                         </IonLabel>
                       </IonItem>
@@ -782,11 +831,13 @@ const ConferenceListPage: React.FC = () => {
                   {/* Highlight Badges */}
                   {scanResult.highlight && scanResult.highlight.length > 0 && (
                     <div style={{ marginTop: '15px' }}>
-                      {scanResult.highlight.map((hl, idx) => (
-                        <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
-                          {hl}
-                        </IonBadge>
-                      ))}
+                      {scanResult.highlight
+                        .filter(hl => !hl.toLowerCase().includes('policyconfirmed'))
+                        .map((hl, idx) => (
+                          <IonBadge key={idx} color="primary" style={{ marginRight: '5px', marginBottom: '5px' }}>
+                            {hl}
+                          </IonBadge>
+                        ))}
                     </div>
                   )}
 
@@ -822,7 +873,10 @@ const ConferenceListPage: React.FC = () => {
                   size="large"
                   color="success"
                   onClick={checkIn}
-                  disabled={checkingIn}
+                  disabled={
+                    checkingIn ||
+                    Boolean(scanResult.policyconfirmed && scanResult.policyconfirmed.toLowerCase().includes('no'))
+                  }
                   style={{ marginTop: '20px' }}
                 >
                   {checkingIn ? 'Checking In...' : 'Check In'}
@@ -837,7 +891,7 @@ const ConferenceListPage: React.FC = () => {
                 }}
                 style={{ marginTop: '16px' }}
               >
-                Close
+                Cancel
               </IonButton>
             </div>
           )}
