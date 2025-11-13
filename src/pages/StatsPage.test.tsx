@@ -86,11 +86,16 @@ describe('StatsPage', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the page with title', () => {
+    it('should render the page with title', async () => {
       mockApiClient.getStats.mockResolvedValue([]);
 
       renderWithRouter(<StatsPage />);
       expect(screen.getByText('Statistics')).toBeInTheDocument();
+
+      // Wait for async state updates to complete
+      await waitFor(() => {
+        expect(mockApiClient.getStats).toHaveBeenCalled();
+      });
     });
 
     it('should show loading state initially', () => {
@@ -100,20 +105,30 @@ describe('StatsPage', () => {
       expect(screen.getByText('Loading statistics...')).toBeInTheDocument();
     });
 
-    it('should render close button in header', () => {
+    it('should render close button in header', async () => {
       mockApiClient.getStats.mockResolvedValue([]);
 
       renderWithRouter(<StatsPage />);
       // Ionic buttons don't have accessible roles in jsdom, just check page renders
       expect(screen.getByText('Statistics')).toBeInTheDocument();
+
+      // Wait for async state updates to complete
+      await waitFor(() => {
+        expect(mockApiClient.getStats).toHaveBeenCalled();
+      });
     });
 
-    it('should render help button in header', () => {
+    it('should render help button in header', async () => {
       mockApiClient.getStats.mockResolvedValue([]);
 
       renderWithRouter(<StatsPage />);
       // Ionic buttons don't have accessible roles in jsdom, just check page renders
       expect(screen.getByText('Statistics')).toBeInTheDocument();
+
+      // Wait for async state updates to complete
+      await waitFor(() => {
+        expect(mockApiClient.getStats).toHaveBeenCalled();
+      });
     });
   });
 
