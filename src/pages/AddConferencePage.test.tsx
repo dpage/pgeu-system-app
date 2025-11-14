@@ -54,9 +54,9 @@ describe('AddConferencePage', () => {
       expect(elements.length).toBeGreaterThan(0);
     });
 
-    it('should render conference setup card', () => {
+    it('should render conference scan setup card', () => {
       renderWithRouter(<AddConferencePage />);
-      expect(screen.getByText('Conference Setup')).toBeInTheDocument();
+      expect(screen.getByText('Conference Scan Setup')).toBeInTheDocument();
     });
 
     it('should render URL input field', () => {

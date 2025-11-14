@@ -82,7 +82,7 @@ const AddConferencePage: React.FC = () => {
       <IonContent className="ion-padding">
         <IonCard>
           <IonCardHeader>
-            <IonCardTitle>Conference Setup</IonCardTitle>
+            <IonCardTitle>Conference Scan Setup</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
             <IonText color="medium">
