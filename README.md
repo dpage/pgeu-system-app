@@ -22,6 +22,7 @@ This Ionic application replaces the legacy Android-only app, expanding support t
 - **Android:** 11 (API 30) and later
 
 **Architecture Principles:**
+
 - Modern, non-deprecated APIs only
 - TypeScript strict mode for type safety
 - Secure token storage using platform keychains
@@ -63,6 +64,7 @@ This Ionic application replaces the legacy Android-only app, expanding support t
 ## Technology Stack
 
 **Core Framework:**
+
 - Ionic Framework 8.7.9
 - Capacitor 7.4.2
 - React 19.0.0
@@ -70,6 +72,7 @@ This Ionic application replaces the legacy Android-only app, expanding support t
 - Vite (build tool)
 
 **Key Dependencies:**
+
 - **UI Components:** @ionic/react (Ionic UI components)
 - **Camera & QR:** @capacitor/camera + @capacitor-mlkit/barcode-scanning
 - **Networking:** Axios with retry interceptors
@@ -208,19 +211,23 @@ thresholds: {
 ### Test Structure
 
 **Utilities:**
+
 - `conferenceParser.test.ts` - URL parsing, validation, conference creation
 - `tokenValidator.test.ts` - Token format validation
 
 **Services:**
+
 - `apiClient.test.ts` - HTTP requests, error handling, retry logic
 - `storage.test.ts` - Conference CRUD operations
 - `deepLinkService.test.ts` - Deep link parsing and handling
 - `scannerService.test.ts` - Barcode scanning and permissions
 
 **State Management:**
+
 - `conferenceStore.test.ts` - Store operations, computed properties
 
 **Components:**
+
 - `ConferenceListPage.test.tsx` - Page rendering, scanner integration
 - `AddConferencePage.test.tsx` - Form validation, submission
 - `StatsPage.test.tsx` - Data loading, table rendering
@@ -261,6 +268,7 @@ it('should load data on mount', async () => {
 ### Continuous Integration
 
 Tests run automatically on:
+
 - Every commit (pre-commit hook recommended)
 - Pull request creation
 - Main branch merges
@@ -336,18 +344,21 @@ https://{domain}/events/sponsor/scanning/{token}/
 ```
 
 **Setup Requirements:**
+
 - iOS: Associated Domains + Universal Links
 - Android: App Links verification + Digital Asset Links
 
 ## App Store Deployment
 
 ### iOS App Store
+
 - Privacy Manifest (PrivacyInfo.xcprivacy)
 - Camera permission usage description
 - TestFlight beta testing
 - Age rating: 4+
 
 ### Google Play Store
+
 - Data Safety declarations completed
 - Target SDK 34 (Android 14) minimum
 - 64-bit native libraries

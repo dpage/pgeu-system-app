@@ -18,6 +18,7 @@ The pgeu-system backend provides three distinct scanner API endpoints for confer
 ### 1.1 Core Files
 
 **Check-in APIs:**
+
 - **File:** `/postgresqleu/confreg/checkin.py` (407 lines)
 - **URL Config:** `/postgresqleu/urls.py` (lines 131-135, 381-382)
 - **Functions:**
@@ -30,6 +31,7 @@ The pgeu-system backend provides three distinct scanner API endpoints for confer
   - `badge_token()` - Handle public token scans
 
 **Sponsor Scanning APIs:**
+
 - **File:** `/postgresqleu/confsponsor/scanning.py`
 - **URL Config:** `/postgresqleu/confsponsor/urls.py` (lines 19-24, 59)
 - **Functions:**
@@ -39,6 +41,7 @@ The pgeu-system backend provides three distinct scanner API endpoints for confer
   - `landing()` - Scanner landing page with QR codes
 
 **Models:**
+
 - **File:** `/postgresqleu/confreg/models.py`
   - `Conference` - Conference configuration
   - `ConferenceRegistration` - Attendee registrations
@@ -2174,6 +2177,7 @@ CREATE INDEX ON confsponsor_scannedattendee (scannedat DESC);
 ## Appendix C: Code References
 
 **Key Files:**
+
 - `/postgresqleu/confreg/checkin.py` - Check-in and field APIs (407 lines)
 - `/postgresqleu/confsponsor/scanning.py` - Sponsor scanning API
 - `/postgresqleu/confreg/models.py` - Core data models
@@ -2184,6 +2188,7 @@ CREATE INDEX ON confsponsor_scannedattendee (scannedat DESC);
 - `/postgresqleu/util/qr.py` - QR code generation
 
 **Important Functions:**
+
 - `_get_checkin()` - Authorization check for check-in
 - `_get_reg_json()` - Serialize registration data
 - `_get_statistics()` - Generate check-in stats

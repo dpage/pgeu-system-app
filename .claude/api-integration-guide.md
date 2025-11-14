@@ -28,6 +28,7 @@ The token is embedded in the URL path, not as a query parameter or header.
 ## Authentication Mechanism
 
 **Method:** URL-based token authentication
+
 - No separate login endpoint
 - No username/password
 - No OAuth/JWT
