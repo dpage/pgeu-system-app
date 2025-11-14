@@ -3,15 +3,15 @@
  * Centralizes API URL construction logic for different conference modes
  */
 
-import { Conference } from '../types/conference';
+import { Conference, ParsedConferenceUrl } from '../types/conference';
 import { ApiClient, createApiClient } from '../services/apiClient';
 
 /**
  * Builds the API URL for a given conference based on its mode
- * @param conference - The conference configuration
+ * @param conference - The conference configuration or parsed URL
  * @returns The complete API URL
  */
-export function buildApiUrl(conference: Conference): string {
+export function buildApiUrl(conference: Conference | ParsedConferenceUrl): string {
   const { baseUrl, mode, token, eventSlug, fieldId } = conference;
 
   if (mode === 'sponsor') {
