@@ -119,7 +119,7 @@ describe('ConferenceListPage', () => {
       });
 
       renderWithRouter(<ConferenceListPage />);
-      expect(screen.getByText('Loading conferences...')).toBeInTheDocument();
+      expect(screen.getByText('Loading conference scans...')).toBeInTheDocument();
     });
 
     it('should show error state', () => {
@@ -247,7 +247,7 @@ describe('ConferenceListPage', () => {
       renderWithRouter(<ConferenceListPage />);
       // Ionic button doesn't expose disabled state properly in jsdom
       // Just check the disabled button text is displayed
-      expect(screen.getByText('Select a Conference to Scan')).toBeInTheDocument();
+      expect(screen.getByText('Select a Conference Scan')).toBeInTheDocument();
     });
 
     it('should show stats button for checkin mode', () => {
@@ -381,7 +381,7 @@ describe('ConferenceListPage', () => {
       expect(selectorButtons.length).toBeGreaterThan(0);
     });
 
-    it('should show "Select Conference" when none active', () => {
+    it('should show "Select Conference Scan" when none active', () => {
       vi.mocked(useConferenceStore).mockReturnValue({
         conferences: [mockConference],
         activeConferenceId: null,
@@ -398,7 +398,7 @@ describe('ConferenceListPage', () => {
       });
 
       renderWithRouter(<ConferenceListPage />);
-      expect(screen.getByText('Select Conference')).toBeInTheDocument();
+      expect(screen.getByText('Select Conference Scan')).toBeInTheDocument();
     });
   });
 

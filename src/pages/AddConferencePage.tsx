@@ -70,7 +70,7 @@ const AddConferencePage: React.FC = () => {
               <IonIcon slot="icon-only" icon={arrowBack} />
             </IonButton>
           </IonButtons>
-          <IonTitle>Add Conference</IonTitle>
+          <IonTitle>Add Conference Scan</IonTitle>
           <IonButtons slot="end">
             <IonButton onClick={helpModal.open}>
               <IonIcon slot="icon-only" icon={helpCircleOutline} />
@@ -114,7 +114,7 @@ const AddConferencePage: React.FC = () => {
               style={{ marginTop: '1rem' }}
             >
               <IonIcon slot="start" icon={checkmark} />
-              {isSubmitting ? 'Adding...' : 'Add Conference'}
+              {isSubmitting ? 'Adding...' : 'Add Conference Scan'}
             </IonButton>
           </IonCardContent>
         </IonCard>

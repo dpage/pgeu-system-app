@@ -419,7 +419,7 @@ const ConferenceListPage: React.FC = () => {
         <ErrorMessage error={error} onDismiss={clearError} />
 
         {isLoading ? (
-          <LoadingSpinner message="Loading conferences..." />
+          <LoadingSpinner message="Loading conference scans..." />
         ) : conferences.length === 0 ? (
           <div className="ion-padding ion-text-center" style={{ marginTop: '50%' }}>
             <IonText color="medium">
@@ -482,7 +482,7 @@ const ConferenceListPage: React.FC = () => {
                   ? 'Start Scanning'
                   : conferences.length === 1
                   ? 'Select & Scan'
-                  : 'Select a Conference to Scan'}
+                  : 'Select a Conference Scan'}
               </IonButton>
 
               {/* Search Bar - Only available for check-in mode */}
@@ -576,7 +576,7 @@ const ConferenceListPage: React.FC = () => {
                       </>
                     ) : (
                       <div style={{ fontSize: '16px', color: 'var(--ion-color-medium)' }}>
-                        Select Conference
+                        Select Conference Scan
                       </div>
                     )}
                   </div>
@@ -595,7 +595,7 @@ const ConferenceListPage: React.FC = () => {
       }}>
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Select Conference</IonTitle>
+            <IonTitle>Select Conference Scan</IonTitle>
             <IonButtons slot="end">
               <IonButton onClick={conferenceModal.close}>
                 <IonIcon slot="icon-only" icon={close} />

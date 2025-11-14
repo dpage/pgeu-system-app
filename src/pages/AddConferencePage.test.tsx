@@ -49,8 +49,8 @@ describe('AddConferencePage', () => {
   describe('Rendering', () => {
     it('should render the page with title', () => {
       renderWithRouter(<AddConferencePage />);
-      // Multiple "Add Conference" text (title and button), use getAllByText
-      const elements = screen.getAllByText('Add Conference');
+      // Multiple "Add Conference Scan" text (title and button), use getAllByText
+      const elements = screen.getAllByText('Add Conference Scan');
       expect(elements.length).toBeGreaterThan(0);
     });
 
@@ -67,8 +67,8 @@ describe('AddConferencePage', () => {
 
     it('should render add conference button', () => {
       renderWithRouter(<AddConferencePage />);
-      // Multiple "Add Conference" text, use getAllByText
-      const elements = screen.getAllByText('Add Conference');
+      // Multiple "Add Conference Scan" text, use getAllByText
+      const elements = screen.getAllByText('Add Conference Scan');
       expect(elements.length).toBeGreaterThan(0);
     });
 
@@ -83,7 +83,7 @@ describe('AddConferencePage', () => {
     it('should render back button in header', () => {
       renderWithRouter(<AddConferencePage />);
       // Ionic buttons don't have standard roles in jsdom, check for page structure
-      expect(screen.getAllByText('Add Conference').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Add Conference Scan').length).toBeGreaterThan(0);
     });
 
     it('should render help button in header', () => {
@@ -107,7 +107,7 @@ describe('AddConferencePage', () => {
 
     it('should have button disabled when URL is empty', () => {
       renderWithRouter(<AddConferencePage />);
-      const addButtons = screen.getAllByText('Add Conference');
+      const addButtons = screen.getAllByText('Add Conference Scan');
       const addButton = addButtons.find(el => el.tagName.toLowerCase() === 'ion-button' || el.closest('ion-button'));
 
       expect(addButton).toBeDisabled();
@@ -129,7 +129,7 @@ describe('AddConferencePage', () => {
 
     it('should not submit if URL is empty', () => {
       renderWithRouter(<AddConferencePage />);
-      const addButtons = screen.getAllByText('Add Conference');
+      const addButtons = screen.getAllByText('Add Conference Scan');
       const addButton = addButtons.find(el => el.tagName.toLowerCase() === 'ion-button' || el.closest('ion-button'));
 
       // Button should be disabled, but try clicking anyway

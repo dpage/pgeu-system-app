@@ -17,29 +17,29 @@ export const helpContent: HelpContent = {
     title: 'Getting Started',
     content: [
       'Welcome to PGConf Scanner! This app helps you check in attendees at PostgreSQL conferences.',
-      'To get started, you need to add a conference using a special link provided by the conference organizers.',
+      'To get started, you need to add a conference scan using a special link provided by the conference organizers.',
       'Once added, you can scan attendee QR codes to check them in.',
     ],
   },
 
   addConference: {
-    title: 'Adding a Conference',
+    title: 'Adding a Conference Scan',
     content: [
-      'To add a conference, you need a special check-in URL from the conference organizers.',
+      'To add a conference scan, you need a special check-in URL from the conference organizers.',
       'This URL looks like: https://postgresql.eu/events/pgconf2024/checkin/...',
-      'Simply paste the URL into the text field and tap "Add Conference".',
-      'The conference will be saved and you can start scanning attendees immediately.',
+      'Simply paste the URL into the text field and tap "Add Conference Scan".',
+      'The conference scan will be saved and you can start scanning attendees immediately.',
     ],
   },
 
   conferenceList: {
-    title: 'Managing Conferences',
+    title: 'Managing Conference Scans',
     content: [
-      'The main screen displays the active conference at the top and a "Start Scanning" button.',
-      'Tap the conference selector at the bottom of the screen to view all conferences and switch between them.',
-      'In the conference selector modal, tap on any conference to make it active.',
-      'Swipe left on a conference to delete it from your device.',
-      'Use the "Add Conference Scan" button to add a new conference.',
+      'The main screen displays the active conference scan at the top and a "Start Scanning" button.',
+      'Tap the conference selector at the bottom of the screen to view all conference scans and switch between them.',
+      'In the conference selector modal, tap on any conference scan to make it active.',
+      'Swipe left on a conference scan to delete it from your device.',
+      'Use the "Add Conference Scan" button to add a new conference scan.',
     ],
   },
 
@@ -161,7 +161,7 @@ export const helpContent: HelpContent = {
       'This app securely connects to the conference registration system.',
       'All attendee data is encrypted during transmission.',
       'Conference URLs contain secure access tokens - do not share them.',
-      'The app stores conference information locally on your device.',
+      'The app stores conference scan information locally on your device.',
       'If you lose your device, remove access via the conference admin panel.',
     ],
   },
