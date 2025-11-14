@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { highlightText, HighlightMatch } from './textUtils';
+import { highlightText } from './textUtils';
 
 describe('textUtils', () => {
   describe('highlightText', () => {
