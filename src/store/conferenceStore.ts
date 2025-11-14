@@ -7,7 +7,9 @@ import { create } from 'zustand';
 import { Conference } from '../types/conference';
 import { storageService } from '../services/storage';
 import { createConferenceFromUrl, parseConferenceUrl } from '../utils/conferenceParser';
+import { buildApiUrl } from '../utils/apiUrlBuilder';
 import { createApiClient } from '../services/apiClient';
+import { TIMEOUTS } from '../constants/app';
 
 interface ConferenceState {
   // State
@@ -90,21 +92,13 @@ export const useConferenceStore = create<ConferenceState>((set, get) => ({
       }
 
       // Build API URL from parsed configuration
-      let apiUrl: string;
-      if (parsed.mode === 'sponsor') {
-        apiUrl = `${parsed.baseUrl}/events/sponsor/scanning/${parsed.token}/`;
-      } else if (parsed.mode === 'field') {
-        apiUrl = `${parsed.baseUrl}/events/${parsed.eventSlug}/checkin/${parsed.token}/f${parsed.fieldId}/`;
-      } else {
-        // checkin mode
-        apiUrl = `${parsed.baseUrl}/events/${parsed.eventSlug}/checkin/${parsed.token}/`;
-      }
+      const apiUrl = buildApiUrl(parsed);
 
       // Fetch friendly name from API
       let displayName: string | undefined;
       try {
         const apiClient = createApiClient(apiUrl);
-        const status = await apiClient.getStatus({ timeout: 10000 });
+        const status = await apiClient.getStatus({ timeout: TIMEOUTS.API_DEFAULT });
         displayName = status.confname;
         console.log('[ConferenceStore] Fetched conference name from API:', displayName);
       } catch (error) {

@@ -1,0 +1,206 @@
+/**
+ * Conference List Page Styles
+ * Extracted from inline styles for better maintainability
+ */
+
+/* Conference Info Header */
+.conferenceInfoHeader {
+  text-align: center;
+  padding: 24px 16px 0 16px;
+  border-bottom: 1px solid var(--ion-border-color, #ddd);
+  background-color: var(--ion-background-color, #fff);
+}
+
+.conferenceInfoHeader.hidden {
+  visibility: hidden;
+}
+
+.conferenceName {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+  margin-bottom: 4px;
+}
+
+.conferenceMode {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ion-color-step-600);
+  margin-bottom: 16px;
+}
+
+/* Scanning Container */
+.scanningContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100vh - 56px - 60px - 100px);
+  padding: 16px;
+}
+
+.scanningContainer.hidden {
+  visibility: hidden;
+}
+
+/* Search Components */
+.searchCard {
+  margin-top: 16px;
+}
+
+.searchCardContent {
+  padding: 0;
+}
+
+.searchLoading {
+  padding: 16px;
+  text-align: center;
+}
+
+.searchLoadingText {
+  margin-top: 8px;
+  color: #666;
+}
+
+.searchList {
+  padding: 0;
+}
+
+.searchNoResults {
+  padding: 16px;
+}
+
+.searchNoResultsText {
+  margin: 0;
+  text-align: center;
+}
+
+/* Bottom Conference Selector */
+.bottomSelector {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--ion-background-color, #fff);
+  border-top: 1px solid var(--ion-border-color, #ddd);
+  z-index: 10;
+}
+
+.bottomSelectorButton {
+  margin: 0;
+  height: 60px;
+}
+
+.bottomSelectorContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.bottomSelectorText {
+  flex: 1;
+  text-align: left;
+}
+
+.bottomSelectorTitle {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.bottomSelectorSubtitle {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+.bottomSelectorPlaceholder {
+  font-size: 16px;
+  color: var(--ion-color-medium);
+}
+
+/* Scan Result Modal Content */
+.scanningMessage {
+  text-align: center;
+  margin-top: 50%;
+}
+
+.scanningSpinner {
+  width: 56px;
+  height: 56px;
+}
+
+.scanningText {
+  margin-top: 16px;
+}
+
+.scanError {
+  text-align: center;
+  margin-top: 20%;
+}
+
+.scanErrorIcon {
+  font-size: 64px;
+  color: var(--ion-color-danger);
+}
+
+.scanErrorRetry {
+  margin-top: 24px;
+}
+
+.scanResult {
+  margin-top: 20px;
+}
+
+/* Sponsor Scan Styles */
+.sponsorNotes {
+  margin-top: 20px;
+}
+
+.sponsorActions {
+  margin-top: 20px;
+}
+
+.sponsorCancelButton {
+  margin-top: 16px;
+}
+
+/* Check-in Scan Styles */
+.checkinActions {
+  margin-top: 20px;
+}
+
+.checkinCancelButton {
+  margin-top: 16px;
+}
+
+/* Badge Highlights */
+.badgeContainer {
+  margin-top: 15px;
+}
+
+.badge {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+/* Additional Info */
+.additionalInfo {
+  margin-top: 15px;
+}
+
+.additionalInfoText {
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+/* Check-in Message */
+.checkinMessageBox {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.checkinMessageText {
+  margin: 0;
+}

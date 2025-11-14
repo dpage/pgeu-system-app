@@ -18,24 +18,26 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonSpinner,
   IonText,
   IonRefresher,
   IonRefresherContent,
 } from '@ionic/react';
 import { helpCircleOutline, refreshCircle, close } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
-import { createApiClient } from '../services/apiClient';
+import { createApiClientFromConference } from '../utils/apiUrlBuilder';
 import { StatsResponse, ApiError } from '../types/api';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
+import { useModal } from '../hooks/useModal';
+import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 const StatsPage: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState<boolean>(false);
+  const helpModal = useModal();
 
   const conferences = useConferenceStore(state => state.conferences);
   const activeConferenceId = useConferenceStore(state => state.activeConferenceId);
@@ -66,20 +68,7 @@ const StatsPage: React.FC = () => {
         fieldId: activeConference.fieldId,
       });
 
-      // Build API URL based on conference mode
-      let apiUrl: string;
-      if (activeConference.mode === 'sponsor') {
-        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
-      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
-      } else {
-        // Default checkin mode
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
-      }
-
-      console.log('[Stats] Constructed API URL:', apiUrl);
-
-      const apiClient = createApiClient(apiUrl);
+      const apiClient = createApiClientFromConference(activeConference);
       const statsData = await apiClient.getStats();
       console.log('[Stats] Successfully loaded stats');
       setStats(statsData);
@@ -118,7 +107,7 @@ const StatsPage: React.FC = () => {
           </IonButtons>
           <IonTitle>Statistics</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => setShowHelp(true)}>
+            <IonButton onClick={helpModal.open}>
               <IonIcon slot="icon-only" icon={helpCircleOutline} />
             </IonButton>
           </IonButtons>
@@ -133,22 +122,9 @@ const StatsPage: React.FC = () => {
           />
         </IonRefresher>
 
-        {loading && (
-          <div className="ion-text-center" style={{ marginTop: '50px' }}>
-            <IonSpinner />
-            <p>Loading statistics...</p>
-          </div>
-        )}
+        {loading && <LoadingSpinner message="Loading statistics..." />}
 
-        {error && (
-          <IonCard color="danger">
-            <IonCardContent>
-              <IonText color="light">
-                <p style={{ margin: 0 }}>{error}</p>
-              </IonText>
-            </IonCardContent>
-          </IonCard>
-        )}
+        <ErrorMessage error={error} variant="card" />
 
         {!loading && !error && stats && stats.length === 0 && (
           <div className="ion-text-center" style={{ marginTop: '50px' }}>
@@ -218,8 +194,8 @@ const StatsPage: React.FC = () => {
       </IonContent>
 
       <HelpModal
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
+        isOpen={helpModal.isOpen}
+        onClose={helpModal.close}
         helpSection={helpContent.stats}
       />
     </IonPage>

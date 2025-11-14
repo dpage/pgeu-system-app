@@ -28,13 +28,15 @@ import { arrowBack, checkmark, helpCircleOutline } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
+import { useModal } from '../hooks/useModal';
+import { ErrorMessage } from '../components/ErrorMessage';
 
 const AddConferencePage: React.FC = () => {
   const navigate = useNavigate();
   const { addConferenceFromUrl, error, clearError } = useConferenceStore();
   const [url, setUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const helpModal = useModal();
 
   const handleBack = () => {
     navigate('/conferences', { state: { openModal: true } });
@@ -70,7 +72,7 @@ const AddConferencePage: React.FC = () => {
           </IonButtons>
           <IonTitle>Add Conference</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => setShowHelp(true)}>
+            <IonButton onClick={helpModal.open}>
               <IonIcon slot="icon-only" icon={helpCircleOutline} />
             </IonButton>
           </IonButtons>
@@ -103,15 +105,7 @@ const AddConferencePage: React.FC = () => {
               </IonItem>
             </IonList>
 
-            {error && (
-              <div style={{ marginTop: '1rem' }}>
-                <IonText color="danger">
-                  <p>
-                    <strong>Error:</strong> {error}
-                  </p>
-                </IonText>
-              </div>
-            )}
+            <ErrorMessage error={error} />
 
             <IonButton
               expand="block"
@@ -164,8 +158,8 @@ const AddConferencePage: React.FC = () => {
       </IonContent>
 
       <HelpModal
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
+        isOpen={helpModal.isOpen}
+        onClose={helpModal.close}
         helpSection={helpContent.addConference}
       />
     </IonPage>

@@ -33,18 +33,24 @@ import {
 } from '@ionic/react';
 import { add, trash, radio, radioOutline, qrCodeOutline, helpCircleOutline, statsChartOutline, chevronDown, close, closeCircle, stopCircle } from 'ionicons/icons';
 import { useConferenceStore } from '../store/conferenceStore';
-import { createApiClient } from '../services/apiClient';
+import { createApiClientFromConference } from '../utils/apiUrlBuilder';
 import { CheckinRegistration, SponsorRegistration, ApiError } from '../types/api';
 import { Conference } from '../types/conference';
 import HelpModal from '../components/HelpModal';
 import { helpContent } from '../content/helpContent';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { isCheckinRegistration } from '../utils/typeGuards';
+import { HighlightedText } from '../components/HighlightedText';
+import { ErrorMessage } from '../components/ErrorMessage';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useModal } from '../hooks/useModal';
+import { TIMEOUTS } from '../constants/app';
 
 const ConferenceListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showHelp, setShowHelp] = useState(false);
-  const [showConferenceModal, setShowConferenceModal] = useState(false);
+  const helpModal = useModal();
+  const conferenceModal = useModal();
   const [hideMainContent, setHideMainContent] = useState(false);
 
   // Scanning state
@@ -76,12 +82,12 @@ const ConferenceListPage: React.FC = () => {
       setHideMainContent(true);
       // Use setTimeout to allow navigation transition to complete before opening modal
       setTimeout(() => {
-        setShowConferenceModal(true);
-      }, 100);
+        conferenceModal.open();
+      }, TIMEOUTS.MODAL_TRANSITION);
       // Clear the state to prevent re-opening on refresh
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location, navigate]);
+  }, [location, navigate, conferenceModal]);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -170,17 +176,8 @@ const ConferenceListPage: React.FC = () => {
         const qrCode = result.barcodes[0].rawValue;
         console.log('[Scanner] Scanned QR code:', qrCode);
 
-        // Build API URL based on scan mode
-        let apiUrl: string;
-        if (activeConf.mode === 'sponsor') {
-          apiUrl = `${activeConf.baseUrl}/events/sponsor/scanning/${activeConf.token}/`;
-        } else if (activeConf.mode === 'field' && activeConf.fieldId) {
-          apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/f${activeConf.fieldId}/`;
-        } else {
-          apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/`;
-        }
-
-        const apiClient = createApiClient(apiUrl);
+        // Create API client for the active conference
+        const apiClient = createApiClientFromConference(activeConf);
 
         try {
           const lookupResponse = await apiClient.lookupAttendee(qrCode);
@@ -238,16 +235,7 @@ const ConferenceListPage: React.FC = () => {
     setScanError(null);
 
     try {
-      let apiUrl: string;
-      if (activeConf.mode === 'sponsor') {
-        apiUrl = `${activeConf.baseUrl}/events/sponsor/scanning/${activeConf.token}/`;
-      } else if (activeConf.mode === 'field' && activeConf.fieldId) {
-        apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/f${activeConf.fieldId}/`;
-      } else {
-        apiUrl = `${activeConf.baseUrl}/events/${activeConf.eventSlug}/checkin/${activeConf.token}/`;
-      }
-
-      const apiClient = createApiClient(apiUrl);
+      const apiClient = createApiClientFromConference(activeConf);
 
       // Include notes for sponsor scans
       const storeData = activeConf.mode === 'sponsor'
@@ -264,7 +252,7 @@ const ConferenceListPage: React.FC = () => {
         setAlreadyCheckedIn(false);
         setSponsorNotes('');
         setHideMainContent(false);
-      }, 500);
+      }, TIMEOUTS.CHECKIN_SUCCESS_DELAY);
     } catch (apiError: unknown) {
       console.error('[Scanner] Check-in error:', apiError);
       setScanError(apiError instanceof Error ? apiError.message : 'Failed to check in');
@@ -311,24 +299,13 @@ const ConferenceListPage: React.FC = () => {
     const trimmedQuery = query.trim();
 
     try {
-      // Build API URL based on conference mode
-      let apiUrl: string;
-      if (activeConference.mode === 'sponsor') {
-        apiUrl = `${activeConference.baseUrl}/events/sponsor/scanning/${activeConference.token}/`;
-      } else if (activeConference.mode === 'field' && activeConference.fieldId) {
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/f${activeConference.fieldId}/`;
-      } else {
-        apiUrl = `${activeConference.baseUrl}/events/${activeConference.eventSlug}/checkin/${activeConference.token}/`;
-      }
-
       console.log('[ConferenceList] Performing search:', {
         query: trimmedQuery,
-        apiUrl,
         mode: activeConference.mode,
         eventSlug: activeConference.eventSlug,
       });
 
-      const apiClient = createApiClient(apiUrl);
+      const apiClient = createApiClientFromConference(activeConference);
       const searchResponse = await apiClient.searchAttendees(trimmedQuery);
 
       console.log('[ConferenceList] Search response:', {
@@ -367,7 +344,7 @@ const ConferenceListPage: React.FC = () => {
     if (value.trim().length > 0) {
       searchTimeoutRef.current = setTimeout(() => {
         performSearch(value);
-      }, 800);
+      }, TIMEOUTS.SEARCH_DEBOUNCE);
     } else {
       setSearchResults([]);
       setSearching(false);
@@ -382,37 +359,6 @@ const ConferenceListPage: React.FC = () => {
     // Show attendee in scan result modal
     setScanResult(attendee);
     setAlreadyCheckedIn(!!attendee.already);
-  };
-
-  // Type guard to check if registration is CheckinRegistration
-  const isCheckinRegistration = (reg: CheckinRegistration | SponsorRegistration): reg is CheckinRegistration => {
-    return 'type' in reg;
-  };
-
-  const highlightMatch = (text: string, query: string): JSX.Element => {
-    if (!query || query.trim().length === 0) {
-      return <span>{text}</span>;
-    }
-
-    const lowerText = text.toLowerCase();
-    const lowerQuery = query.toLowerCase().trim();
-    const index = lowerText.indexOf(lowerQuery);
-
-    if (index === -1) {
-      return <span>{text}</span>;
-    }
-
-    const before = text.substring(0, index);
-    const match = text.substring(index, index + lowerQuery.length);
-    const after = text.substring(index + lowerQuery.length);
-
-    return (
-      <span>
-        {before}
-        <strong>{match}</strong>
-        {highlightMatch(after, '')}
-      </span>
-    );
   };
 
   const formatDate = (timestamp: number) => {
@@ -441,7 +387,7 @@ const ConferenceListPage: React.FC = () => {
 
   const handleConferenceSelect = async (id: string) => {
     await setActiveConference(id);
-    setShowConferenceModal(false);
+    conferenceModal.close();
     setHideMainContent(false);
   };
 
@@ -462,7 +408,7 @@ const ConferenceListPage: React.FC = () => {
                 <IonIcon slot="icon-only" icon={statsChartOutline} />
               </IonButton>
             )}
-            <IonButton onClick={() => setShowHelp(true)}>
+            <IonButton onClick={helpModal.open}>
               <IonIcon slot="icon-only" icon={helpCircleOutline} />
             </IonButton>
           </IonButtons>
@@ -470,22 +416,10 @@ const ConferenceListPage: React.FC = () => {
       </IonHeader>
 
       <IonContent>
-        {error && (
-          <div className="ion-padding">
-            <IonText color="danger">
-              <p>{error}</p>
-            </IonText>
-            <IonButton size="small" onClick={clearError}>
-              Dismiss
-            </IonButton>
-          </div>
-        )}
+        <ErrorMessage error={error} onDismiss={clearError} />
 
         {isLoading ? (
-          <div className="ion-padding ion-text-center">
-            <IonSpinner />
-            <p>Loading conferences...</p>
-          </div>
+          <LoadingSpinner message="Loading conferences..." />
         ) : conferences.length === 0 ? (
           <div className="ion-padding ion-text-center" style={{ marginTop: '50%' }}>
             <IonText color="medium">
@@ -581,11 +515,11 @@ const ConferenceListPage: React.FC = () => {
                                 detail={false}
                               >
                                 <IonLabel>
-                                  <h2>{highlightMatch(attendee.name, searchQuery)}</h2>
+                                  <h2><HighlightedText text={attendee.name} query={searchQuery} /></h2>
                                   {attendee.company && (
                                     <p>
                                       <IonText color="medium">
-                                        {highlightMatch(attendee.company, searchQuery)}
+                                        <HighlightedText text={attendee.company} query={searchQuery} />
                                       </IonText>
                                     </p>
                                   )}
@@ -620,7 +554,7 @@ const ConferenceListPage: React.FC = () => {
               <IonButton
                 expand="full"
                 fill="clear"
-                onClick={() => setShowConferenceModal(true)}
+                onClick={conferenceModal.open}
                 style={{ margin: 0, height: '60px' }}
               >
                 <div style={{
@@ -655,15 +589,15 @@ const ConferenceListPage: React.FC = () => {
       </IonContent>
 
       {/* Conference Selection Modal */}
-      <IonModal isOpen={showConferenceModal} onDidDismiss={() => {
-        setShowConferenceModal(false);
+      <IonModal isOpen={conferenceModal.isOpen} onDidDismiss={() => {
+        conferenceModal.close();
         setHideMainContent(false);
       }}>
         <IonHeader>
           <IonToolbar>
             <IonTitle>Select Conference</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setShowConferenceModal(false)}>
+              <IonButton onClick={conferenceModal.close}>
                 <IonIcon slot="icon-only" icon={close} />
               </IonButton>
             </IonButtons>
@@ -1031,8 +965,8 @@ const ConferenceListPage: React.FC = () => {
       </IonModal>
 
       <HelpModal
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
+        isOpen={helpModal.isOpen}
+        onClose={helpModal.close}
         helpSection={helpContent.conferenceList}
       />
 
