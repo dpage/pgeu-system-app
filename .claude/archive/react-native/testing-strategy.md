@@ -848,7 +848,7 @@ detox test --configuration ios.sim.debug --loglevel trace
 **Functionality:**
 - [ ] Login with valid credentials
 - [ ] Login fails with invalid credentials
-- [ ] Conference setup via deep link
+- [ ] Conference scan setup via deep link
 - [ ] QR code scanning (use test QR codes)
 - [ ] Manual attendee ID entry
 - [ ] Switch between scan modes

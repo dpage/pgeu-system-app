@@ -142,7 +142,7 @@ App (Root)
 │   ├── Auth Stack (Not authenticated)
 │   │   ├── Welcome Screen
 │   │   ├── Login Screen
-│   │   └── Conference Setup Screen (Deep Link)
+│   │   └── Conference Scan Setup Screen (Deep Link)
 │   │
 │   └── Main Stack (Authenticated)
 │       ├── Home Tab Navigator
@@ -195,7 +195,7 @@ MainStack (if authenticated)
 ```
 
 **Deep Linking Structure:**
-- `pgeuconf://setup/{token}` - Conference setup link
+- `pgeuconf://setup/{token}` - Conference scan setup link
 - `pgeuconf://conference/{conferenceId}` - Switch conference
 - `pgeuconf://scan/{mode}` - Deep link to specific scan mode
 
@@ -595,7 +595,7 @@ LOG_LEVEL=error
 
 ### E2E Tests (Detox)
 - Login flow
-- Conference setup
+- Conference scan setup
 - QR code scan flow (mocked)
 - Offline queue sync
 - Target: Happy paths + critical errors

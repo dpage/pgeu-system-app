@@ -36,7 +36,7 @@ This document provides comprehensive guidance for ensuring the conference scanne
      Username: reviewer@example.com
      Password: TestPass123!
 
-     Test Conference Setup Link:
+     Test Conference Scan Setup Link:
      pgeuconf://setup/test-token-12345
 
      The app requires camera access for QR code scanning. Active network
@@ -342,7 +342,7 @@ This document provides comprehensive guidance for ensuring the conference scanne
      ```
      Username: reviewer@example.com
      Password: TestPass123!
-     Conference Setup: Use deep link or provide step-by-step instructions
+     Conference Scan Setup: Use deep link or provide step-by-step instructions
      ```
 
 ### Data Safety Declaration

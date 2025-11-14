@@ -220,7 +220,7 @@ Test token: AT$TESTTESTTESTTEST$AT
 
 ## Deep Linking
 
-The app supports deep linking for easy conference setup:
+The app supports deep linking for easy conference scan setup:
 
 **Check-in:**
 ```

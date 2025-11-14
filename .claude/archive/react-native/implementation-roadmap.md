@@ -65,7 +65,7 @@ Detailed week-by-week implementation plan for the conference scanner app, ensuri
 **Day 1-2: Navigation Setup**
 - [ ] Install React Navigation dependencies
 - [ ] Configure navigation container with deep linking
-- [ ] Implement Auth Stack (Welcome, Login, Conference Setup)
+- [ ] Implement Auth Stack (Welcome, Login, Conference Scan Setup)
 - [ ] Implement Main Stack (Tabs, Modals)
 - [ ] Create navigation types for TypeScript
 - [ ] Setup deep linking configuration (basic)
@@ -265,7 +265,7 @@ Detailed week-by-week implementation plan for the conference scanner app, ensuri
 - [ ] Host on web server at .well-known path
 - [ ] Implement deep link handling in AppDelegate
 - [ ] Test Universal Links from Safari/Messages
-- [ ] Verify conference setup link works
+- [ ] Verify conference scan setup link works
 
 **Day 2-3: Android App Links**
 - [ ] Configure intent filters in AndroidManifest
@@ -273,7 +273,7 @@ Detailed week-by-week implementation plan for the conference scanner app, ensuri
 - [ ] Host on web server at .well-known path
 - [ ] Get SHA256 fingerprint for app signing
 - [ ] Test App Links from Chrome/Email
-- [ ] Verify conference setup link works
+- [ ] Verify conference scan setup link works
 
 **Day 4-5: Platform Polish**
 - [ ] iOS safe area handling (notches, Dynamic Island)
@@ -284,7 +284,7 @@ Detailed week-by-week implementation plan for the conference scanner app, ensuri
 
 **Deliverables:**
 - [ ] Deep linking working on both platforms
-- [ ] Conference setup via link functional
+- [ ] Conference scan setup via link functional
 - [ ] Platform-specific UI polished
 - [ ] Tested on multiple devices
 
@@ -480,7 +480,7 @@ Detailed week-by-week implementation plan for the conference scanner app, ensuri
 **Day 1-2: Beta Testing**
 - [ ] Distribute to internal testers (5-10 people)
 - [ ] Collect feedback
-- [ ] Test conference setup flow with real URLs
+- [ ] Test conference scan setup flow with real URLs
 - [ ] Test network error handling in real conference WiFi conditions
 - [ ] Fix critical bugs from beta
 - [ ] Build final release candidates
