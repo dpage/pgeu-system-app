@@ -35,22 +35,25 @@ export const helpContent: HelpContent = {
   conferenceList: {
     title: 'Managing Conferences',
     content: [
-      'This screen shows all conferences you have added to the app.',
-      'The active conference is highlighted and will be used for scanning.',
-      'Tap on any conference to make it active.',
+      'The main screen displays the active conference at the top and a "Start Scanning" button.',
+      'Tap the conference selector at the bottom of the screen to view all conferences and switch between them.',
+      'In the conference selector modal, tap on any conference to make it active.',
       'Swipe left on a conference to delete it from your device.',
-      'Use the "Add Conference" button to add a new conference.',
+      'Use the "Add Conference Scan" button to add a new conference.',
     ],
   },
 
   scanning: {
     title: 'Scanning QR Codes',
     content: [
-      'Tap "Start Scan" to open the camera.',
+      'Tap "Start Scanning" to open the camera.',
       'Point your camera at the attendee\'s QR code badge.',
       'The app will automatically read the code and look up the attendee.',
       'Once found, you\'ll see the attendee\'s details on screen.',
-      'Review the information and tap "Check In Attendee" to complete the process.',
+      'Review the information and tap the action button to complete:',
+      '• Check-In Mode: Tap "Check In"',
+      '• Field Check-In Mode: Tap "Confirm {Field}" (e.g., "Confirm T-shirt")',
+      '• Sponsor Mode: Enter notes and tap "Save Lead"',
     ],
   },
 
@@ -63,7 +66,37 @@ export const helpContent: HelpContent = {
       '• T-Shirt Size (if applicable)',
       '• Special Requirements or Notes',
       '• Highlighted badges (e.g., Speaker, Sponsor)',
-      'If the attendee is already checked in, you\'ll see a warning message.',
+      'The information shown and action buttons vary by mode:',
+      '• Check-In Mode: Shows full details with "Check In" button',
+      '• Field Check-In Mode: Shows details with "Confirm {Field}" button',
+      '• Sponsor Mode: Shows contact details with notes field and "Save Lead" button',
+      'If the attendee is already checked in (check-in modes only), you\'ll see a warning message.',
+    ],
+  },
+
+  searchAttendees: {
+    title: 'Searching for Attendees',
+    content: [
+      'In Check-In Mode, you can search for attendees by name instead of scanning.',
+      'Type the attendee\'s name in the search bar below the "Start Scanning" button.',
+      'The app will show matching results as you type.',
+      'Tap on a result to view their details and check them in.',
+      'Note: Search is only available in Check-In Mode, not in Sponsor or Field modes.',
+    ],
+  },
+
+  scanningModes: {
+    title: 'Scanning Modes',
+    content: [
+      'The app supports three different scanning modes:',
+      '',
+      'Check-In Mode: For checking in conference attendees. Shows full attendee details including registration type, t-shirt size, and policy confirmation. Includes search functionality.',
+      '',
+      'Sponsor Mode: For exhibitors to collect leads. Shows contact information (name, email, company, country) with a notes field to record conversation details.',
+      '',
+      'Field Check-In Mode: For tracking specific items like badge or t-shirt distribution. Shows condensed attendee information optimized for quick confirmations.',
+      '',
+      'The mode is determined by the conference URL provided by the organizers.',
     ],
   },
 
@@ -74,6 +107,7 @@ export const helpContent: HelpContent = {
       'This shows who checked them in and when.',
       'You can still view their details, but the "Check In" button will not be shown.',
       'This prevents duplicate check-ins.',
+      'Note: This check only applies to Check-In and Field Check-In modes, not Sponsor Mode.',
     ],
   },
 
