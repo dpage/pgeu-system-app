@@ -118,8 +118,9 @@ body.barcode-scanner-active .scanner-overlay {
 /* Cancel button */
 .scanner-cancel-button {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  bottom: max(40px, calc(env(safe-area-inset-bottom) + 40px));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 10002;
   padding: 12px 24px;
   background: rgba(255, 255, 255, 0.95);
@@ -136,7 +137,7 @@ body.barcode-scanner-active .scanner-overlay {
 }
 
 .scanner-cancel-button:active {
-  transform: scale(0.95);
+  transform: translateX(-50%) scale(0.95);
   background: rgba(255, 255, 255, 0.85);
 }
 
