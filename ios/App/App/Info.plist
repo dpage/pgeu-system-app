@@ -45,6 +45,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to scan attendee badges at conferences.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
