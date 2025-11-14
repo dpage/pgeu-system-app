@@ -55,18 +55,6 @@ export interface ParsedConferenceUrl {
 }
 
 /**
- * Valid domain patterns for pgeu-system instances
- */
-export const VALID_DOMAINS = [
-  'postgresql.eu',
-  'postgresql.us',
-  'pgevents.ca',
-  'pgday.uk',
-  'localhost',
-  '127.0.0.1',
-] as const;
-
-/**
  * Conference URL patterns:
  *
  * Check-in:
