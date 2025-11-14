@@ -167,6 +167,105 @@ npm run build           # Build for production
 npx cap sync           # Sync changes to native projects
 ```
 
+## Testing
+
+The PGConf Scanner has comprehensive test coverage using Vitest. Tests cover utilities, services, stores, and React components.
+
+### Test Framework
+
+- **Testing Library**: Vitest 4.0.8
+- **React Testing**: @testing-library/react 14.3.1
+- **Mocking**: Vitest built-in mocking
+- **Environment**: jsdom (for DOM simulation)
+- **Coverage**: v8 provider with HTML/LCOV reporting
+
+### Test Coverage
+
+Coverage thresholds are maintained at 70% for all metrics:
+
+```typescript
+thresholds: {
+  lines: 70,
+  functions: 70,
+  branches: 70,
+  statements: 70,
+}
+```
+
+**Well Tested (>80% coverage):**
+- Conference URL parsing
+- Token validation
+- Conference store logic
+- API client methods
+- Storage service operations
+
+**Moderate Coverage (50-80%):**
+- Component interactions
+- Error boundaries
+- Modal behaviors
+- Scanner integration
+
+### Test Structure
+
+**Utilities:**
+- `conferenceParser.test.ts` - URL parsing, validation, conference creation
+- `tokenValidator.test.ts` - Token format validation
+
+**Services:**
+- `apiClient.test.ts` - HTTP requests, error handling, retry logic
+- `storage.test.ts` - Conference CRUD operations
+- `deepLinkService.test.ts` - Deep link parsing and handling
+- `scannerService.test.ts` - Barcode scanning and permissions
+
+**State Management:**
+- `conferenceStore.test.ts` - Store operations, computed properties
+
+**Components:**
+- `ConferenceListPage.test.tsx` - Page rendering, scanner integration
+- `AddConferencePage.test.tsx` - Form validation, submission
+- `StatsPage.test.tsx` - Data loading, table rendering
+
+### Common Test Patterns
+
+**Mocking Capacitor Plugins:**
+```typescript
+vi.mock('@capacitor-mlkit/barcode-scanning', () => ({
+  BarcodeScanner: {
+    isSupported: vi.fn(),
+    checkPermissions: vi.fn(),
+    startScan: vi.fn(),
+  },
+}));
+```
+
+**Testing Async Operations:**
+```typescript
+it('should load data on mount', async () => {
+  mockApiClient.getData.mockResolvedValue(mockData);
+  renderWithRouter(<MyPage />);
+
+  await waitFor(() => {
+    expect(mockApiClient.getData).toHaveBeenCalled();
+  });
+});
+```
+
+### Best Practices
+
+1. **Test Behavior, Not Implementation** - Focus on user-visible behavior
+2. **Use Descriptive Test Names** - Start with "should", be specific
+3. **Arrange-Act-Assert Pattern** - Set up, perform action, verify result
+4. **Mock External Dependencies** - Always mock Capacitor plugins and API clients
+5. **Test Edge Cases** - Empty states, errors, invalid input, network failures
+
+### Continuous Integration
+
+Tests run automatically on:
+- Every commit (pre-commit hook recommended)
+- Pull request creation
+- Main branch merges
+- Release builds
+
 ## Backend Integration
 
 The app integrates with the [pgeu-system](https://github.com/pgeu/pgeu-system) Django backend for:
@@ -184,19 +283,18 @@ See [.claude/backend-scanner-api-analysis.md](.claude/backend-scanner-api-analys
 
 ## Documentation
 
-Comprehensive documentation is available in the `.claude/` directory:
-
-### Start Here
-- **[MIGRATION_OVERVIEW.md](.claude/MIGRATION_OVERVIEW.md)** - Project overview
-- **[quick-reference.md](.claude/quick-reference.md)** - Quick lookup guide
+Technical documentation is available in the `.claude/` directory:
 
 ### Backend & API
-- **[api-integration-guide.md](.claude/api-integration-guide.md)** - API reference
-- **[backend-scanner-api-analysis.md](.claude/backend-scanner-api-analysis.md)** - Backend deep-dive
+- **[backend-scanner-api-analysis.md](.claude/backend-scanner-api-analysis.md)** - Complete backend API documentation
+- **[api-integration-guide.md](.claude/api-integration-guide.md)** - API integration guide
 
-### Legacy Implementations
+### Legacy Reference
 - **[android-app-comprehensive-analysis.md](.claude/android-app-comprehensive-analysis.md)** - Original Android app analysis
-- **[src-react-native/](.src-react-native/)** - Archived React Native implementation
+
+### Development History
+- **[.claude/archive/development/](.claude/archive/development/)** - Migration plans and implementation guides
+- **[.claude/archive/react-native/](.claude/archive/react-native/)** - Archived React Native attempt
 
 ## QR Code Formats
 
@@ -287,7 +385,7 @@ For issues related to:
 ## Project Status
 
 **Current Phase:** Active Development
-**Last Updated:** 2025-11-10
+**Last Updated:** 2025-11-14
 
 ---
 
