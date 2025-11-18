@@ -390,7 +390,7 @@ For issues related to:
 
 ## License
 
-[License information to be added]
+This code is licenced under [The PostgreSQL License](LICENSE.md).
 
 ## Project Status
 
