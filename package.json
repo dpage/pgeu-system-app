@@ -17,21 +17,21 @@
     "android": "npm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
-    "@capacitor-mlkit/barcode-scanning": "^7.3.0",
+    "@capacitor-mlkit/barcode-scanning": "^7.4.0",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.0",
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^7.4.4",
     "@capacitor/ios": "^7.4.4",
     "@capacitor/preferences": "^7.0.2",
-    "@ionic/react": "^8.7.9",
-    "@ionic/react-router": "^8.7.9",
-    "@tanstack/react-query": "^5.90.7",
+    "@ionic/react": "^8.7.11",
+    "@ionic/react-router": "^8.7.11",
+    "@tanstack/react-query": "^5.90.12",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-router-dom": "^7.9.5",
-    "zod": "^4.1.12",
-    "zustand": "^5.0.8"
+    "react-router-dom": "^7.10.1",
+    "zod": "^4.1.13",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
