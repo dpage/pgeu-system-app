@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 // Get signing configuration from environment variables (used in CI)
-def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-def keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
-def hasSigningConfig = keystorePath != null && file(keystorePath).exists()
+def signingKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+def signingStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def signingKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def signingKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def hasSigningConfig = signingKeystorePath != null && file(signingKeystorePath).exists()
 
 android {
     namespace "eu.postgresql.pgconfscanner"
@@ -26,10 +26,10 @@ android {
     signingConfigs {
         release {
             if (hasSigningConfig) {
-                storeFile file(keystorePath)
-                storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
+                storeFile file(signingKeystorePath)
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
             }
         }
     }
