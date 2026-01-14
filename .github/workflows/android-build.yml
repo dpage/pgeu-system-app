@@ -1,0 +1,209 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+      build_format:
+        description: 'Build format'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
+
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_type: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'release' }}
+
+    env:
+      VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.1-{0}', github.run_number) }}
+      VERSION_CODE: ${{ github.run_number }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Decode Keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          echo "ANDROID_KEYSTORE_PATH=${{ github.workspace }}/android/app/release.keystore" >> $GITHUB_ENV
+
+      - name: Set signing environment variables
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Determine build configuration
+        id: build-config
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
+          BUILD_FORMAT="${{ github.event.inputs.build_format || 'both' }}"
+
+          # For tag pushes, always build release with both formats
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            BUILD_TYPE="release"
+            BUILD_FORMAT="both"
+          fi
+
+          echo "build_type=$BUILD_TYPE" >> $GITHUB_OUTPUT
+          echo "build_format=$BUILD_FORMAT" >> $GITHUB_OUTPUT
+
+          # Determine which builds to run
+          if [ "$BUILD_TYPE" = "both" ] || [ "$BUILD_TYPE" = "debug" ]; then
+            echo "build_debug=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_debug=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$BUILD_TYPE" = "both" ] || [ "$BUILD_TYPE" = "release" ]; then
+            echo "build_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_release=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$BUILD_FORMAT" = "both" ] || [ "$BUILD_FORMAT" = "apk" ]; then
+            echo "build_apk=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_apk=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$BUILD_FORMAT" = "both" ] || [ "$BUILD_FORMAT" = "aab" ]; then
+            echo "build_aab=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_aab=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Debug APK
+        if: steps.build-config.outputs.build_debug == 'true' && steps.build-config.outputs.build_apk == 'true'
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Build Release APK
+        if: steps.build-config.outputs.build_release == 'true' && steps.build-config.outputs.build_apk == 'true'
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Build Release AAB
+        if: steps.build-config.outputs.build_release == 'true' && steps.build-config.outputs.build_aab == 'true'
+        working-directory: android
+        run: ./gradlew bundleRelease
+
+      - name: List build outputs
+        run: |
+          echo "=== APK outputs ==="
+          find android/app/build/outputs/apk -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
+          echo "=== AAB outputs ==="
+          find android/app/build/outputs/bundle -name "*.aab" -type f 2>/dev/null || echo "No AABs found"
+
+      - name: Upload Debug APK
+        if: steps.build-config.outputs.build_debug == 'true' && steps.build-config.outputs.build_apk == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgconfscanner-debug-${{ env.VERSION_NAME }}-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Release APK
+        if: steps.build-config.outputs.build_release == 'true' && steps.build-config.outputs.build_apk == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgconfscanner-release-${{ env.VERSION_NAME }}-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload Release AAB
+        if: steps.build-config.outputs.build_release == 'true' && steps.build-config.outputs.build_aab == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgconfscanner-release-${{ env.VERSION_NAME }}-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f android/app/release.keystore
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-android]
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display artifacts
+        run: ls -R artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.apk
+            artifacts/**/*.aab
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
