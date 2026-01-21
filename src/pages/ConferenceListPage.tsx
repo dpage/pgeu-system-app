@@ -549,6 +549,7 @@ const ConferenceListPage: React.FC = () => {
               right: 0,
               backgroundColor: 'var(--ion-background-color, #fff)',
               borderTop: '1px solid var(--ion-border-color, #ddd)',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               zIndex: 10
             }}>
               <IonButton
