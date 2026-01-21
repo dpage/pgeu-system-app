@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.1-{0}', github.run_number) }}
+      VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || format('0.2-{0}', github.run_number) }}
       VERSION_CODE: ${{ github.run_number }}
 
     steps:
