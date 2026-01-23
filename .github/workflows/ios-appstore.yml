@@ -170,7 +170,7 @@ jobs:
               <key>uploadSymbols</key>
               <true/>
               <key>destination</key>
-              <string>upload</string>
+              <string>export</string>
               <key>provisioningProfiles</key>
               <dict>
                   <key>eu.postgresql.pgconfscanner</key>
@@ -181,27 +181,27 @@ jobs:
           EOF
 
       - name: Export IPA
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/App.xcarchive \
             -exportPath $RUNNER_TEMP/export \
-            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 \
-            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_ISSUER_ID"
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist
+
+          echo "=== Exported files ==="
+          ls -la $RUNNER_TEMP/export/
 
       - name: Upload to App Store Connect
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
+          # Find the IPA file (name may vary)
+          IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" | head -1)
+          echo "Uploading: $IPA_FILE"
+
           xcrun altool --upload-app \
             --type ios \
-            --file "$RUNNER_TEMP/export/App.ipa" \
+            --file "$IPA_FILE" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
 
